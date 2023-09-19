@@ -4,14 +4,14 @@ library(data.table)
 
 ## simple example:
 # Create data.tables
-TD-variable <- data.table::data.table(person_id = c("P01", "P02", "P03", "P03"), start_date = c(1, 100, 1, 500),
+TD_variable <- data.table::data.table(person_id = c("P01", "P02", "P03", "P03"), start_date = c(1, 100, 1, 500),
                end_date = c(675, 760, 300, 675), value_of_in_study_period = c(1, 1, 1, 1))
 D_EVENT <- data.table::data.table(person_id = c("P02", "P03"), date_of_event = c(50, 75))
-TD-variable[, value_of_in_study_period := NULL]
+TD_variable[, value_of_in_study_period := NULL]
 
 # Left join of spells and events
-combined_df <- TD-variable[D_EVENT, on = "person_id", date_of_event := i.date_of_event]
-# rm(TD-variable, D_EVENT)
+combined_df <- TD_variable[D_EVENT, on = "person_id", date_of_event := i.date_of_event]
+# rm(TD_variable, D_EVENT)
 
 # Left join of spells and events
 df_between <- combined_df[date_of_event > start_date & date_of_event <= end_date]
