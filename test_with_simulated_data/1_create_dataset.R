@@ -8,7 +8,7 @@ library(dplyr)
 # Create dataset 
 
 # Store in a variable the size of the dataset
-df_size <- 10000
+df_size <- 1000
 
 # Define parameters for age bands (left limits included)
 age_band_limits <- c(18, 25, 35, 45, 65, 85)
@@ -258,6 +258,6 @@ rm(data)
 
 
 write.csv(exposed, paste0(thisdir,"/",name_dataset_exposed,".csv"), row.names = FALSE)
-write.csv(exposed, paste0(thisdir,"/",name_dataset_candidate_matches,".csv"), row.names = FALSE)
+write.csv(candidate_matches, paste0(thisdir,"/",name_dataset_candidate_matches,".csv"), row.names = FALSE)
 #####################################################
 
