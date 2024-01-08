@@ -47,7 +47,7 @@ preamble <- "person_id != i.person_id & vax1_day >= start & vax1_day < end"
 matching_strings <- c("")
 
 for (matching_variable in range_matching){ 
-    matching_strings <- c(matching_strings, paste0( "between(",matching_variable,",",matching_variable," - ",matching_rule_for_range[[matching_variable]][2], " ,",matching_variable," + ",matching_rule_for_range[[matching_variable]][1],")") )
+    matching_strings <- c(matching_strings, paste0( "between(",matching_variable,",i.",matching_variable," - ",matching_rule_for_range[[matching_variable]][2], " ,i.",matching_variable," + ",matching_rule_for_range[[matching_variable]][1],")") )
   }
 
 matching_string <- paste(preamble,paste(matching_strings, collapse = " & "))
