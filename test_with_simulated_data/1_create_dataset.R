@@ -250,9 +250,15 @@ candidate_matches <- rbind(candidate_matches,candidate_matches_add)
 rm(candidate_matches_add)
 candidate_matches <- subset(candidate_matches,select = -additional_unexposed)
 
-#remove the dataframe -data-
+#remove data
 
 rm(data)
+
+# clean exposed and candidate_matches
+
+exposed <-  subset(exposed, select = c(-ageband,-Nageband))
+candidate_matches <-  subset(candidate_matches, select = c(-ageband,-Nageband))
+
 
 # save the datasets in csv format
 
