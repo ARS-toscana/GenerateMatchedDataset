@@ -138,6 +138,20 @@ for (batch in list_of_batches){
   candidate_matchesbatch <- candidate_matches
   dataset_matched  <- eval(parse(text = sprintf("exposedbatch[candidate_matchesbatch, allow.cartesian = TRUE, on = .(%s)][%s]", exact_matching, matching_string)))
   
+  # sort
+  
+  sort_accordingly_to <- c("person_id","i.person_id")
+  setkeyv(dataset_matched, sort_accordingly_to)
+  
+  #reorder
+  
+  column_order <- c("person_id", "i.person_id","vax1_day","start","end" )
+  column_order <- c(column_order, setdiff(names(dataset_matched), column_order))
+  dataset_matched <- dataset_matched[, ..column_order]
+  
+  
+
+  
   # save the datasets in csv format
   write.csv(dataset_matched, paste0(thisdir,"/",name_dataset_matched,"_",batch,".csv"), row.names = FALSE)
   
