@@ -12,7 +12,7 @@ df_size <- 1000
 # Define parameters for age bands (left limits included)
 age_band_limits <- c(18, 25, 35, 45, 65, 85)
 # if you want to include an additional ageband from the last limit onwards, set the parameter add_older_ages to TRUE, otherwise to FALSE
-add_older_ages <- TRUE
+add_older_ages <- F
 # Define probabilities for age bands (the length of this vector must be )
 age_band_probabilities <- c(0.1, 0.18, 0.24, 0.23, 0.15, 0.1)
 
@@ -58,16 +58,10 @@ if (add_older_ages){
 }else{
   age_band_limits_complete <- age_band_limits 
 }
-if (add_older_ages){
-  number_age_bands <- length(age_band_limits)
-}else{
-  number_age_bands <- length(age_band_limits) - 1
-}
-if (add_older_ages){
-  age_band_values <- age_band_limits
-}else{
-  age_band_values <- age_band_limits[-length(age_band_limits)] 
-}
+
+number_age_bands <- length(age_band_limits)
+age_band_values <- age_band_limits
+
 # check that the probabilities for age are correct
 if (length(age_band_probabilities) != number_age_bands){
   stop(paste0("The number of probabilities you assigned in -age_band_probabilities- is ",length(age_band_probabilities),", while the number of age bands you have set is ",number_age_bands,". In -age_band_probabilities- you must set as many probabilities as the number of age bands"))
