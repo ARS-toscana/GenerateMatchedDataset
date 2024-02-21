@@ -45,10 +45,10 @@ TD_single_dataset_to_be_completed <- CreateSpells(
   quiet = T
 )
 
-TD_single_dataset_to_be_completed$entry_spell_category <- as.numeric(TD_single_dataset_to_be_completed$entry_spell_category, origin = lubridate::origin)
+TD_single_dataset_to_be_completed[, entry_spell_category := as.numeric(entry_spell_category)]
 data.table::setnames(TD_single_dataset_to_be_completed, "entry_spell_category", "start_record")
 
-TD_single_dataset_to_be_completed$exit_spell_category <- as.numeric(TD_single_dataset_to_be_completed$exit_spell_category, origin = lubridate::origin)
+TD_single_dataset_to_be_completed[, exit_spell_category := as.numeric(exit_spell_category)]
 data.table::setnames(TD_single_dataset_to_be_completed, "exit_spell_category", "end_record")
 
 
