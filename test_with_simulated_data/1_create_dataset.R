@@ -3,7 +3,6 @@ rm(list=ls(all.names=TRUE))
 if (!require("dplyr")) install.packages("dplyr")
 library(dplyr)
 
-
 #-------------------------------
 # Create dataset 
 
@@ -55,7 +54,7 @@ thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
 # sets the complete list of intervals for age bands, excluding possibly the last
 if (add_older_ages){
-age_band_limits_complete <- c(age_band_limits,100)
+  age_band_limits_complete <- c(age_band_limits,100)
 }else{
   age_band_limits_complete <- age_band_limits 
 }
@@ -83,7 +82,7 @@ if (length(frequency_COM) != number_age_bands){
 }
 for (freq in frequency_COM){
   if (freq > 1){
-  stop(paste0("One of the frequencies in -frequency_COMs- is larger than 1, please reset"))
+    stop(paste0("One of the frequencies in -frequency_COMs- is larger than 1, please reset"))
   }
 }
 # check that the occurrence of unexposed are correct
@@ -107,7 +106,7 @@ data <- data.frame(person_id = 1:df_size,
                    vax1_day = rep(NA, df_size), 
                    SES = rep(NA, df_size),
                    REGION = rep(NA, df_size)
-                   )
+)
 
 
 # set ageband labels
