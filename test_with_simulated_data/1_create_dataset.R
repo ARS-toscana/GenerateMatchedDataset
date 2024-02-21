@@ -15,6 +15,7 @@ age_band_limits <- c(18, 25, 35, 45, 65, 85)
 # TODO what to do in case FALSE and there are persons over 85?
 add_older_ages <- T
 # Define probabilities for age bands (the length of this vector must be )
+# TODO define age probabilities when? Maybe better to derive birth date an then age to get multiple consecutive spells
 age_band_probabilities <- c(0.1, 0.18, 0.24, 0.23, 0.15, 0.1)
 
 # Define parameters for vax1_day
@@ -108,7 +109,6 @@ df_data <- data.table::data.table(person_id = 1:df_size,
                                   REGION = NA
 )
 
-
 # set ageband labels
 age_band_labels <- c()
 for (i in head(age_band_limits, -1))  {
@@ -119,7 +119,7 @@ if (add_older_ages){
 }
 
 # Generate agebands based on the distribution
-df_data$Nageband <- sample(1:number_age_bands, df_size, replace = TRUE, prob = age_band_probabilities)
+df_data[, Nageband := sample(1:number_age_bands, df_size, replace = TRUE, prob = age_band_probabilities)]
 
 # Assign Ages Within Bands
 df_data$age <- sapply(df_data$Nageband, function(x) {
