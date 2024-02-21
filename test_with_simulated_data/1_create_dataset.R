@@ -54,9 +54,9 @@ thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
 # sets the complete list of intervals for age bands, excluding possibly the last
-if (add_older_ages){
+if (add_older_ages) {
   age_band_limits_complete <- c(age_band_limits,100)
-}else{
+} else {
   age_band_limits_complete <- age_band_limits 
 }
 
@@ -65,15 +65,21 @@ age_band_values <- age_band_limits
 
 # check that the probabilities for age are correct
 if (length(age_band_probabilities) != number_age_bands){
-  stop(paste0("The number of probabilities you assigned in -age_band_probabilities- is ",length(age_band_probabilities),", while the number of age bands you have set is ",number_age_bands,". In -age_band_probabilities- you must set as many probabilities as the number of age bands"))
+  stop(paste0("The number of probabilities you assigned in -age_band_probabilities- is ", length(age_band_probabilities),
+              ", while the number of age bands you have set is ", number_age_bands,
+              ". In -age_band_probabilities- you must set as many probabilities as the number of age bands"))
 }
 sum_probabilities <- sum(age_band_probabilities)
 if (sum_probabilities != 1){ 
-  stop(paste0("The probabilities you assigned in -age_band_probabilities- add up to ",sum_probabilities,", while they should add up to 1"))
+  stop(paste0("The probabilities you assigned in -age_band_probabilities- add up to ", sum_probabilities,
+              ", while they should add up to 1"))
 }
+
 # check that the frequencies for comorbidity are correct
 if (length(frequency_COM) != number_age_bands){
-  stop(paste0("The number of frequencies you assigned in -frequency_COMs- is ",length(frequency_COM),", while the number of age bands you have set is ",number_age_bands,". In -age_band_probabilities- you must set as many frequencies as the number of age bands"))
+  stop(paste0("The number of frequencies you assigned in -frequency_COMs- is ", length(frequency_COM),
+              ", while the number of age bands you have set is ", number_age_bands,
+              ". In -age_band_probabilities- you must set as many frequencies as the number of age bands"))
 }
 for (freq in frequency_COM){
   if (freq > 1){
