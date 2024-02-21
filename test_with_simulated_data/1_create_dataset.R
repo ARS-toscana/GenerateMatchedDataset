@@ -85,14 +85,12 @@ sum_freq <- sum(frequency_COM)
 if (sum_freq > 1){
   stop(paste0("The sum of the frequencies in -frequency_COMs- is larger than 1, please reset"))
 }
+
 # check that the occurrence of unexposed are correct
 if (length(occurrence_unexposed) != number_age_bands){
-  stop(paste0("The number of occurrence of unexposed you assigned in -occurrence_unexposed- is ",length(occurrence_unexposed),", while the number of age bands you have set is ",number_age_bands,". In -age_band_probabilities- you must set occurrence of unexposed as many times as the number of age bands"))
-}
-for (freq in frequency_COM){
-  if (freq > 1){
-    stop(paste0("One of the frequencies in -frequency_COMs- is larger than 1, please reset"))
-  }
+  stop(paste0("The number of occurrence of unexposed you assigned in -occurrence_unexposed- is " ,
+              length(occurrence_unexposed), ", while the number of age bands you have set is ", number_age_bands,
+              ". In -age_band_probabilities- you must set occurrence of unexposed as many times as the number of age bands"))
 }
 
 
