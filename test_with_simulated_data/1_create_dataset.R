@@ -111,11 +111,11 @@ df_data <- data.table::data.table(person_id = 1:df_size,
 
 # set ageband labels
 age_band_labels <- c()
-for (i in 1:(length(age_band_limits) - 1))  {
-  age_band_labels <- c(age_band_labels,paste0(as.character(age_band_limits[i]),"-",as.character(age_band_limits[i+1] - 1)) )
+for (i in head(age_band_limits, -1))  {
+  age_band_labels <- c(age_band_labels, paste0(age_band_limits[i], "-", age_band_limits[i+1] - 1))
 }
 if (add_older_ages){
-  age_band_labels <- c(age_band_labels,paste0(as.character(age_band_limits[length(age_band_limits)]),"+"))
+  age_band_labels <- c(age_band_labels, paste0(age_band_limits[length(age_band_limits)], "+"))
 }
 
 # Generate agebands based on the distribution
