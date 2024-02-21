@@ -55,12 +55,11 @@ data.table::setnames(TD_single_dataset_to_be_completed, "exit_spell_category", "
 TD_single_dataset_to_be_completed <- TD_single_dataset_to_be_completed[, CONTACTS7 := 1]
 value_default <- 0
 
-combined_df <- cohort[TD_single_dataset_to_be_completed, on = "person_id", allow.cartesian = TRUE, nomatch = 0L]
-
+combined_df <- cohort[TD_single_dataset_to_be_completed, on = "person_id", all.x = T, nomatch = 0L]
 
 #combined_df <- cohort[TD_single_dataset_to_be_completed, on = "person_id", allow.cartesian = TRUE]
 # combined_df <- cohort[TD_single_dataset_to_be_completed, on = "person_id", allow.cartesian = TRUE, nomatch = 0][, .(person_id, CONTACTS7), by = .EACHI]
-combined_df <- cohort[, .(person_id)][TD_single_dataset_to_be_completed, on = "person_id", allow.cartesian = TRUE]
+combined_df <- cohort[, .(person_id)][TD_single_dataset_to_be_completed, on = "person_id", all.x = T]
 
 all.equal(TD_dataset, combined_df)
 
