@@ -101,11 +101,11 @@ if (length(occurrence_unexposed) != number_age_bands){
 
 # Create an empty data frame
 df_data <- data.table::data.table(person_id = 1:df_size, 
-                               age = 0, 
-                               COMORBIDITY = 0, 
-                               vax1_day = NA, 
-                               SES = NA,
-                               REGION = NA
+                                  age = 0, 
+                                  COMORBIDITY = 0, 
+                                  vax1_day = NA, 
+                                  SES = NA,
+                                  REGION = NA
 )
 
 
