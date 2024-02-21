@@ -111,7 +111,7 @@ df_data <- data.table::data.table(person_id = 1:df_size,
 
 # set ageband labels
 age_band_labels <- c()
-for (i in head(age_band_limits, -1))  {
+for (i in 1:(length(age_band_limits)-1))  {
   age_band_labels <- c(age_band_labels, paste0(age_band_limits[i], "-", age_band_limits[i+1] - 1))
 }
 if (add_older_ages){
@@ -122,21 +122,19 @@ if (add_older_ages){
 df_data[, Nageband := sample(1:number_age_bands, df_size, replace = TRUE, prob = age_band_probabilities)]
 
 # Assign Ages Within Bands
-df_data$age <- sapply(df_data$Nageband, function(x) {
+df_data[, age := sapply(Nageband, function(x) {
   lower_limit <- age_band_limits_complete[x]
   upper_limit <- age_band_limits_complete[x + 1] 
   sample(seq(lower_limit, upper_limit), 1)
-})
+})]
 
 # Create a categorical variable based on age_band_labels
-df_data$ageband <- age_band_labels[df_data$Nageband]
-
+df_data[, ageband := age_band_labels[Nageband]]
 
 # Print distribution of age
 print(prop.table(table(df_data$age)))
 print(prop.table(table(df_data$ageband)))
 print(age_band_probabilities)
-
 
 # Generate binary variable COMORBIDITY based on probabilities
 df_data$COMORBIDITY <- sapply(df_data$Nageband, function(x) {
