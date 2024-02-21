@@ -12,7 +12,8 @@ df_size <- 1000
 # Define parameters for age bands (left limits included)
 age_band_limits <- c(18, 25, 35, 45, 65, 85)
 # if you want to include an additional ageband from the last limit onwards, set the parameter add_older_ages to TRUE, otherwise to FALSE
-add_older_ages <- F
+# TODO what to do in case FALSE and there are persons over 85?
+add_older_ages <- T
 # Define probabilities for age bands (the length of this vector must be )
 age_band_probabilities <- c(0.1, 0.18, 0.24, 0.23, 0.15, 0.1)
 
