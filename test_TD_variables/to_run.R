@@ -32,13 +32,11 @@ TD_dataset <- fread(paste0(thisdir,"/TD_dataset.csv"), sep = ",")
 # 1: create the TD variable of CONTACTS7: at least one contact in the past 7 days
 
 # each record lasts 7 days, so its end date is date + 7
-
-CONTACTS$date <- as_date(CONTACTS$date, origin = lubridate::origin)
+CONTACTS[, date := data.table::as.IDate(date)]
 data.table::setnames(CONTACTS, "date", "start_record")
 CONTACTS <- CONTACTS[, end_record := start_record + 7]
 
 # apply CreateSpells to create unique disjoint spells of the variable
-
 TD_single_dataset_to_be_completed <- CreateSpells(
   dataset = CONTACTS,
   id = "person_id" ,
@@ -46,6 +44,7 @@ TD_single_dataset_to_be_completed <- CreateSpells(
   end_date = "end_record",
   quiet = T
 )
+
 TD_single_dataset_to_be_completed$entry_spell_category <- as.numeric(TD_single_dataset_to_be_completed$entry_spell_category, origin = lubridate::origin)
 data.table::setnames(TD_single_dataset_to_be_completed, "entry_spell_category", "start_record")
 
@@ -64,6 +63,6 @@ combined_df <- cohort[TD_single_dataset_to_be_completed, on = "person_id", allow
 # combined_df <- cohort[TD_single_dataset_to_be_completed, on = "person_id", allow.cartesian = TRUE, nomatch = 0][, .(person_id, CONTACTS7), by = .EACHI]
 combined_df <- cohort[, .(person_id)][TD_single_dataset_to_be_completed, on = "person_id", allow.cartesian = TRUE]
 
-
+all.equal(TD_dataset, combined_df)
 
 # .(key, value, b1, b2, i.a1, i.a2)]
