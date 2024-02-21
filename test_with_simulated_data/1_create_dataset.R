@@ -93,9 +93,11 @@ if (length(occurrence_unexposed) != number_age_bands){
               ". In -age_band_probabilities- you must set occurrence of unexposed as many times as the number of age bands"))
 }
 
-
-########################################
-# CREATE THE DATASET OF EXPOSED
+##%######################################################%##
+#                                                          #
+####           CREATE THE DATASET OF EXPOSED            ####
+#                                                          #
+##%######################################################%##
 
 # Create an empty data frame
 data <- data.frame(person_id = 1:df_size, 
