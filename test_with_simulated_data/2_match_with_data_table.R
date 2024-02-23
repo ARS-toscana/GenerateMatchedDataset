@@ -50,6 +50,8 @@ for (matching_variable in range_matching){
 
 matching_string <- paste(preamble,paste(matching_strings, collapse = " & "), sep = " & ")
 
+print(matching_string)
+
 # match
 
 parsed_matching_string <- parse(text = matching_string)

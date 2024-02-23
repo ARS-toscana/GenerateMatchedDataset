@@ -57,7 +57,6 @@ matching_string <- paste(preamble, paste(matching_strings, collapse = " & "))
 
 string_for_batches <- substr(paste(matching_strings, collapse = " & "), 4, nchar(paste(matching_strings, collapse = " & ")))
 
-
 print(matching_string)
 
 # CREATE BATCHES
