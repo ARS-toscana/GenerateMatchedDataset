@@ -114,7 +114,7 @@ assign_groups <- function(values, threshold) {
 
 # Apply the function to create the variable 'batch_number'
 batch_numbers_from_unfrequent_combinations <- 
-frequencies_of_matched_combinations[frequency_combination <= threshold ,][, batch_number := assign_groups(frequency_combination, threshold)]
+  frequencies_of_matched_combinations[frequency_combination <= threshold ,][, batch_number := assign_groups(frequency_combination, threshold)]
 
 maxbatch_number <- max(batch_numbers_from_unfrequent_combinations[,batch_number])
 
@@ -150,12 +150,12 @@ for (batch in list_of_batches){
   dataset_matched <- dataset_matched[, ..column_order]
   
   
-
+  
   
   # save the datasets in csv format
   write.csv(dataset_matched, paste0(thisdir,"/",name_dataset_matched,"_",batch,".csv"), row.names = FALSE)
   
-  }
+}
 
 
 #####################################################
