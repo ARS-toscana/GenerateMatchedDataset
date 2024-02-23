@@ -29,15 +29,15 @@ range_matching <- c("age")
 
 matching_rule_for_range <- vector(mode="list")
 
-matching_rule_for_range[['age']] <- c(1,1)
+matching_rule_for_range[['age']] <- c(1, 1)
 
 
 #-----------------------------
 # START MATCHING
 # load datasets
 
-exposed <- fread(paste0(thisdir,"/",name_dataset_exposed,".csv") )
-candidate_matches <- fread(paste0(thisdir,"/",name_dataset_candidate_matches,".csv") )
+exposed <- fread(paste0(thisdir, "/", name_dataset_exposed, ".csv") )
+candidate_matches <- fread(paste0(thisdir, "/", name_dataset_candidate_matches, ".csv") )
 
 
 # compose match string
@@ -71,7 +71,7 @@ dataset_matched <- dataset_matched[, ..column_order]
 
 # save the datasets in csv format
 
-write.csv(dataset_matched, paste0(thisdir,"/",name_dataset_matched,".csv"), row.names = FALSE)
+write.csv(dataset_matched, paste0(thisdir, "/", name_dataset_matched, ".csv"), row.names = FALSE)
 
 #####################################################
 
