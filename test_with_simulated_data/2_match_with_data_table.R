@@ -71,7 +71,7 @@ dataset_matched <- dataset_matched[, ..column_order]
 
 # save the datasets in csv format
 
-write.csv(dataset_matched, paste0(thisdir, "/", name_dataset_matched, ".csv"), row.names = FALSE)
+fwrite(dataset_matched, paste0(thisdir, "/", name_dataset_matched, ".csv"), row.names = FALSE)
 
 #####################################################
 
