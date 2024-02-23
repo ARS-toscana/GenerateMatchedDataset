@@ -44,13 +44,13 @@ candidate_matches <- fread(paste0(thisdir, "/", name_dataset_candidate_matches, 
 
 preamble <- "person_id != i.person_id & vax1_day >= start & vax1_day < end"
 
-matching_strings <- c("")
+matching_strings <- c()
 
 for (matching_variable in range_matching){ 
     matching_strings <- c(matching_strings, paste0( "between(",matching_variable,",i.",matching_variable," - ",matching_rule_for_range[[matching_variable]][2], " ,i.",matching_variable," + ",matching_rule_for_range[[matching_variable]][1],")") )
   }
 
-matching_string <- paste(preamble,paste(matching_strings, collapse = " & "))
+matching_string <- paste(preamble,paste(matching_strings, collapse = " & "), sep = " & ")
 
 print(matching_string)
 
@@ -70,8 +70,12 @@ column_order <- c(column_order, setdiff(names(dataset_matched), column_order))
 dataset_matched <- dataset_matched[, ..column_order]
 
 # save the datasets in csv format
+original <- fread(paste0(thisdir, "/", name_dataset_matched, ".csv"))
+setkey(original, person_id)
 
-fwrite(dataset_matched, paste0(thisdir, "/", name_dataset_matched, ".csv"), row.names = FALSE)
+all.equal(original, dataset_matched)
+identical(original, dataset_matched)
+# fwrite(dataset_matched, paste0(thisdir, "/", name_dataset_matched, ".csv"), row.names = FALSE)
 
 #####################################################
 
