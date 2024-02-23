@@ -63,7 +63,7 @@ setkeyv(dataset_matched, sort_accordingly_to)
 #reorder
 
 column_order <- c("person_id", "i.person_id","vax1_day","start","end" )
-column_order <- c(column_order, setdiff(names(dataset_matched), column_order))
+column_order <- union(column_order, names(dataset_matched))
 dataset_matched <- dataset_matched[, ..column_order]
 
 # save the datasets in csv format
