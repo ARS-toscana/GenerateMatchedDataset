@@ -67,12 +67,7 @@ column_order <- union(column_order, names(dataset_matched))
 dataset_matched <- dataset_matched[, ..column_order]
 
 # save the datasets in csv format
-original <- fread(paste0(thisdir, "/", name_dataset_matched, ".csv"))
-setkey(original, person_id)
-
-all.equal(original, dataset_matched)
-identical(original, dataset_matched)
-# fwrite(dataset_matched, paste0(thisdir, "/", name_dataset_matched, ".csv"), row.names = FALSE)
+fwrite(dataset_matched, paste0(thisdir, "/", name_dataset_matched, ".csv"), row.names = FALSE)
 
 #####################################################
 
