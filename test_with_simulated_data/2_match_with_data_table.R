@@ -23,7 +23,7 @@ name_dataset_matched <- paste0("matched_",as.character(df_size))
 
 # assign matching criteria
 
-exact_matching <- "SES, REGION"
+exact_matching <- c("SES", "REGION")
 
 range_matching <- c("age")
 
@@ -52,7 +52,8 @@ matching_string <- paste(preamble,paste(matching_strings, collapse = " & "), sep
 
 # match
 
-dataset_matched  <- eval(parse(text = sprintf("exposed[candidate_matches, allow.cartesian = TRUE, on = .(%s)][%s]", exact_matching, matching_string)))
+parsed_matching_string <- parse(text = matching_string)
+dataset_matched <- exposed[candidate_matches, allow.cartesian = TRUE, on = exact_matching][eval(parsed_matching_string)]
 
 # sort
 
