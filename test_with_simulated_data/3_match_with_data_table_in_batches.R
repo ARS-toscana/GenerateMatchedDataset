@@ -111,8 +111,6 @@ assign_groups <- function(values, threshold) {
 # Apply the function to create the variable 'batch_number'
 batch_numbers_from_unfrequent_combinations <- frequencies_of_matched_combinations[frequency_combination <= threshold, ][, batch_number := assign_groups(frequency_combination, threshold)]
 
-test <- batch_numbers_from_unfrequent_combinations[, sum(frequency_combination), by = "batch_number"]
-
 maxbatch_number <- max(batch_numbers_from_unfrequent_combinations[, batch_number])
 
 batch_numbers_from_frequent_combinations <- frequencies_of_matched_combinations[frequency_combination > threshold, ][ , batch_number := maxbatch_number + 1:.N]
