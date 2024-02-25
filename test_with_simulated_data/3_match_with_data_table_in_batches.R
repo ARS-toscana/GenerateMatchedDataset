@@ -68,44 +68,50 @@ matched_combinations <- unique_combinations_exposed[unique_combinations_cm, allo
                                                     on = exact_matching][eval(parsed_matching_string)]
 
 frequencies_of_matched_combinations <- matched_combinations[, frequency_record := frequency_exposed * frequency_cm]
-frequencies_of_matched_combinations[, .(frequency_combination = sum(frequency_record)), by = batching_variables]
+frequencies_of_matched_combinations <- frequencies_of_matched_combinations[, .(frequency_combination = sum(frequency_record)), by = batching_variables]
 
 # now i want to know what is the best algorithm to execute a task and how to implement it in R. the algorithm should take a integer parameter that has the role of a threshold, and a list of integers all smaller or equal to the threshold. i want to group the integers in such a way that the sum of all the elements of each group is smaller than the threshold, and the number of groups is minimal
+# The algorithm implemented right now is First-fit-decreasing (FFD). Worst case instance is FFD(1) = 11/9 * OPT(I) + 6/9
 
 group_integers <- function(values, threshold) {
+  names(values) <- 1:length(values)
   values <- sort(values, decreasing = TRUE)  # Sort values in descending order
   
-  groups <- list()
-  current_group <- c()
-  current_sum <- 0
+  groups_idx <- list(list("sum" = 0, "indices" = c()))
   
-  for (val in values) {
-    if ((current_sum + val) <= threshold) {
-      current_group <- c(current_group, val)
-      current_sum <- current_sum + val
+  for (val in names(values)) {
+    
+    which_less_thr <- which(sapply(groups_idx, `[[`, 1) + values[[val]] <= threshold)
+    
+    if (identical(which_less_thr, integer(0))) {
+      groups_idx <- append(groups_idx, list(list("sum" = values[[val]], "indices" = c(val))))
     } else {
-      groups <- append(groups, list(current_group))
-      current_group <- c(val)
-      current_sum <- val
+      idx <- min(which_less_thr)
+      groups_idx[[idx]][["indices"]] <- c(groups_idx[[idx]][["indices"]], val)
+      groups_idx[[idx]][["sum"]] <- groups_idx[[idx]][["sum"]] + values[[val]]
     }
   }
   
-  # Add the last group
-  groups <- append(groups, list(current_group))
-  
-  return(groups)
+  return(groups_idx)
 }
 
 # Function to assign groups
 assign_groups <- function(values, threshold) {
   groups <- group_integers(values, threshold)
-  group_assignment <- rep(1:length(groups), sapply(groups, length))
+  
+  group_assignment <- rep(1:length(groups), sapply(lapply(groups, `[[`, 2), length))
+  names(group_assignment) <- unlist(lapply(groups, `[[`, 2))
+  group_assignment <- setNames(as.integer(names(group_assignment)), group_assignment)
+  group_assignment <- sort(group_assignment)
+  group_assignment <- setNames(as.integer(names(group_assignment)), NULL)
+  
   return(group_assignment)
 }
 
 # Apply the function to create the variable 'batch_number'
-batch_numbers_from_unfrequent_combinations <- 
-  frequencies_of_matched_combinations[frequency_combination <= threshold, ][, batch_number := assign_groups(frequency_combination, threshold)]
+batch_numbers_from_unfrequent_combinations <- frequencies_of_matched_combinations[frequency_combination <= threshold, ][, batch_number := assign_groups(frequency_combination, threshold)]
+
+test <- batch_numbers_from_unfrequent_combinations[, sum(frequency_combination), by = "batch_number"]
 
 maxbatch_number <- max(batch_numbers_from_unfrequent_combinations[, batch_number])
 
