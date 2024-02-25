@@ -63,8 +63,9 @@ unique_combinations_exposed <- exposed[, .(frequency_exposed = .N), by = batchin
 unique_combinations_cm <- candidate_matches[, .(frequency_cm = .N), by = batching_variables]
 
 # merge the two datatables of combinations
-
-matched_combinations <- eval(parse(text = sprintf("unique_combinations_exposed[unique_combinations_cm, allow.cartesian = TRUE, on = .(%s)][%s]", exact_matching, string_for_batches)))
+parsed_matching_string <- parse(text = string_for_batches)
+matched_combinations <- unique_combinations_exposed[unique_combinations_cm, allow.cartesian = TRUE,
+                                                    on = exact_matching][eval(parsed_matching_string)]
 
 frequencies_of_matched_combinations <- matched_combinations[, frequency_record := frequency_exposed * frequency_cm]
 
