@@ -68,12 +68,7 @@ matched_combinations <- unique_combinations_exposed[unique_combinations_cm, allo
                                                     on = exact_matching][eval(parsed_matching_string)]
 
 frequencies_of_matched_combinations <- matched_combinations[, frequency_record := frequency_exposed * frequency_cm]
-
-frequencies_of_matched_combinations <- frequencies_of_matched_combinations[, `:=`(frequency_combination = sum(frequency_record)), by = batching_variables]
-
-tokeep <- c(batching_variables, "frequency_combination")
-
-frequencies_of_matched_combinations <- unique(frequencies_of_matched_combinations[, ..tokeep])
+frequencies_of_matched_combinations[, .(frequency_combination = sum(frequency_record)), by = batching_variables]
 
 # now i want to know what is the best algorithm to execute a atsk and how to implement it in R. the algorithm should take a integer parameter that has the role of a threshold, and a list of integers all smaller or equal to the threshold. i want to group the integers in such a way that the sum of all the elements of each group is smaller than the threshold, and the number of groups is minimal
 
