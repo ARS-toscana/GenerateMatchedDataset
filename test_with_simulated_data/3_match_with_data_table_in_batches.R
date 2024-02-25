@@ -25,7 +25,7 @@ name_dataset_matched <- paste0("matched", as.character(df_size), "_in_batches_wi
 
 # assign matching criteria
 
-exact_matching <- "SES, REGION"
+exact_matching <- c("SES", "REGION")
 
 range_matching <- c("age")
 
@@ -47,17 +47,12 @@ candidate_matches <- fread(paste0(thisdir, "/", name_dataset_candidate_matches, 
 
 preamble <- "person_id != i.person_id & vax1_day >= start & vax1_day < end"
 
-matching_strings <- c("")
-
 for (matching_variable in range_matching){ 
-  matching_strings <- c(matching_strings, paste0( "between(", matching_variable, ", i.", matching_variable, " - ", matching_rule_for_range[[matching_variable]][2], ", i.", matching_variable, " + ", matching_rule_for_range[[matching_variable]][1], ")") )
+  matching_strings <- paste0( "between(", matching_variable, ", i.", matching_variable, " - ", matching_rule_for_range[[matching_variable]][2], ", i.", matching_variable, " + ", matching_rule_for_range[[matching_variable]][1], ")")
 }
 
-matching_string <- paste(preamble, paste(matching_strings, collapse = " & "))
-
-string_for_batches <- substr(paste(matching_strings, collapse = " & "), 4, nchar(paste(matching_strings, collapse = " & ")))
-
-
+matching_string <- paste(preamble, paste(matching_strings, collapse = " & "), sep = " & ")
+string_for_batches <- paste(matching_strings, collapse = " & ")
 print(matching_string)
 
 # CREATE BATCHES
@@ -150,10 +145,12 @@ for (batch in list_of_batches){
   dataset_matched <- dataset_matched[, ..column_order]
   
   
-  
+  original <- fread(paste0(thisdir, "/", name_dataset_matched, "_", batch, ".csv"))
+  setkey(original, "person_id", "i.person_id")
+  print(paste("all.equal:",  all.equal(original, dataset_matched), "identical:", identical(original, dataset_matched)))
   
   # save the datasets in csv format
-  write.csv(dataset_matched, paste0(thisdir, "/", name_dataset_matched, "_", batch, ".csv"), row.names = FALSE)
+  # write.csv(dataset_matched, paste0(thisdir, "/", name_dataset_matched, "_", batch, ".csv"), row.names = FALSE)
   
 }
 
