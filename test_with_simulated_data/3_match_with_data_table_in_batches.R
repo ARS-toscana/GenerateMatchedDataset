@@ -126,7 +126,7 @@ exposed <- batches[exposed, on = batching_variables]
 number_of_batches <- length(list_of_batches)
 
 for (batch in list_of_batches){
-  print(paste0("matching batch ", batch, " of ", number_of_batches))
+  print(paste("matching batch", batch, "of", number_of_batches))
   exposedbatch <- exposed[batch_number == batch, ]
   # TODO: select records of candidate_matches whose values of the matching variables correspond in matched_combinations to the values of  -batch- in the exposed dataset
   # values_of_candidate_matched_variables <- matched_combinations[SELECT VALUES OF MATCHING VARIABLES CORRESPONDING TO batch,]
