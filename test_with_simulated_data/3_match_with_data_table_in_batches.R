@@ -117,7 +117,7 @@ batch_numbers_from_frequent_combinations <- frequencies_of_matched_combinations[
 
 batches <- rbind(batch_numbers_from_unfrequent_combinations, batch_numbers_from_frequent_combinations)
 
-list_of_batches <- unique(batches[, batch_number])
+list_of_batches <- sort(unique(batches[, batch_number]))
 
 # match in batches
 
@@ -131,19 +131,17 @@ for (batch in list_of_batches){
   # TO DO: select records of candidate_matches whose values of the matching variables correspond in matched_combinations to the values of  -batch- in the exposed dataset
   # values_of_candidate_matched_variables <- matched_combinations[SELECT VALUES OF MATCHING VARIABLES CORRESPONDING TO batch,]
   candidate_matchesbatch <- candidate_matches
-  dataset_matched  <- eval(parse(text = sprintf("exposedbatch[candidate_matchesbatch, allow.cartesian = TRUE, on = .(%s)][%s]", exact_matching, matching_string)))
+  parsed_matching_string <- parse(text = matching_string)
+  dataset_matched <- exposedbatch[candidate_matchesbatch, allow.cartesian = TRUE, on = exact_matching][eval(parsed_matching_string)]
   
   # sort
-  
   sort_accordingly_to <- c("person_id", "i.person_id")
   setkeyv(dataset_matched, sort_accordingly_to)
   
   #reorder
-  
   column_order <- c("person_id", "i.person_id", "vax1_day", "start", "end" )
   column_order <- c(column_order, setdiff(names(dataset_matched), column_order))
   dataset_matched <- dataset_matched[, ..column_order]
-  
   
   original <- fread(paste0(thisdir, "/", name_dataset_matched, "_", batch, ".csv"))
   setkey(original, "person_id", "i.person_id")
