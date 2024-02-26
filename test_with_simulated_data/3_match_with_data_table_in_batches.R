@@ -139,15 +139,11 @@ for (batch in list_of_batches){
   
   #reorder
   column_order <- c("person_id", "i.person_id", "vax1_day", "start", "end" )
-  column_order <- c(column_order, setdiff(names(dataset_matched), column_order))
+  column_order <- union(column_order, names(dataset_matched))
   dataset_matched <- dataset_matched[, ..column_order]
   
-  original <- fread(paste0(thisdir, "/", name_dataset_matched, "_", batch, ".csv"))
-  setkey(original, "person_id", "i.person_id")
-  print(paste("all.equal:",  all.equal(original, dataset_matched), "identical:", identical(original, dataset_matched)))
-  
   # save the datasets in csv format
-  # write.csv(dataset_matched, paste0(thisdir, "/", name_dataset_matched, "_", batch, ".csv"), row.names = FALSE)
+  write.csv(dataset_matched, paste0(thisdir, "/", name_dataset_matched, "_", batch, ".csv"), row.names = FALSE)
   
 }
 
