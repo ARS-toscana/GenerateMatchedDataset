@@ -1,8 +1,13 @@
 rm(list=ls(all.names=TRUE))
 
-if (!require("dplyr")) install.packages("dplyr")
-library(dplyr)
+#set the directory where the script is saved as the working directory
+if (!require("rstudioapi")) install.packages("rstudioapi")
+thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
+# load packages
+if (!require("data.table")) install.packages("data.table")
+library(data.table)
 
 #-------------------------------
 # Create dataset 
@@ -13,7 +18,7 @@ df_size <- 1000
 # Define parameters for age bands (left limits included)
 age_band_limits <- c(18, 25, 35, 45, 65, 85)
 # if you want to include an additional ageband from the last limit onwards, set the parameter add_older_ages to TRUE, otherwise to FALSE
-add_older_ages <- TRUE
+add_older_ages <- T
 # Define probabilities for age bands (the length of this vector must be )
 age_band_probabilities <- c(0.1, 0.18, 0.24, 0.23, 0.15, 0.1)
 
@@ -54,104 +59,100 @@ thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
 # sets the complete list of intervals for age bands, excluding possibly the last
-if (add_older_ages){
-age_band_limits_complete <- c(age_band_limits,100)
-}else{
+if (add_older_ages) {
+  age_band_limits_complete <- c(age_band_limits,100)
+} else {
   age_band_limits_complete <- age_band_limits 
 }
-if (add_older_ages){
-  number_age_bands <- length(age_band_limits)
-}else{
-  number_age_bands <- length(age_band_limits) - 1
-}
-if (add_older_ages){
-  age_band_values <- age_band_limits
-}else{
-  age_band_values <- age_band_limits[-length(age_band_limits)] 
-}
+
+number_age_bands <- length(age_band_limits)
+age_band_values <- age_band_limits
+
 # check that the probabilities for age are correct
 if (length(age_band_probabilities) != number_age_bands){
-  stop(paste0("The number of probabilities you assigned in -age_band_probabilities- is ",length(age_band_probabilities),", while the number of age bands you have set is ",number_age_bands,". In -age_band_probabilities- you must set as many probabilities as the number of age bands"))
+  stop(paste0("The number of probabilities you assigned in -age_band_probabilities- is ", length(age_band_probabilities),
+              ", while the number of age bands you have set is ", number_age_bands,
+              ". In -age_band_probabilities- you must set as many probabilities as the number of age bands"))
 }
 sum_probabilities <- sum(age_band_probabilities)
 if (sum_probabilities != 1){ 
-  stop(paste0("The probabilities you assigned in -age_band_probabilities- add up to ",sum_probabilities,", while they should add up to 1"))
+  stop(paste0("The probabilities you assigned in -age_band_probabilities- add up to ", sum_probabilities,
+              ", while they should add up to 1"))
 }
+
 # check that the frequencies for comorbidity are correct
 if (length(frequency_COM) != number_age_bands){
-  stop(paste0("The number of frequencies you assigned in -frequency_COMs- is ",length(frequency_COM),", while the number of age bands you have set is ",number_age_bands,". In -age_band_probabilities- you must set as many frequencies as the number of age bands"))
+  stop(paste0("The number of frequencies you assigned in -frequency_COMs- is ", length(frequency_COM),
+              ", while the number of age bands you have set is ", number_age_bands,
+              ". In -age_band_probabilities- you must set as many frequencies as the number of age bands"))
 }
-for (freq in frequency_COM){
-  if (freq > 1){
-  stop(paste0("One of the frequencies in -frequency_COMs- is larger than 1, please reset"))
-  }
+sum_freq <- sum(frequency_COM)
+if (sum_freq > 1){
+  stop(paste0("The sum of the frequencies in -frequency_COMs- is larger than 1, please reset"))
 }
+
 # check that the occurrence of unexposed are correct
 if (length(occurrence_unexposed) != number_age_bands){
-  stop(paste0("The number of occurrence of unexposed you assigned in -occurrence_unexposed- is ",length(occurrence_unexposed),", while the number of age bands you have set is ",number_age_bands,". In -age_band_probabilities- you must set occurrence of unexposed as many times as the number of age bands"))
-}
-for (freq in frequency_COM){
-  if (freq > 1){
-    stop(paste0("One of the frequencies in -frequency_COMs- is larger than 1, please reset"))
-  }
+  stop(paste0("The number of occurrence of unexposed you assigned in -occurrence_unexposed- is " ,
+              length(occurrence_unexposed), ", while the number of age bands you have set is ", number_age_bands,
+              ". In -age_band_probabilities- you must set occurrence of unexposed as many times as the number of age bands"))
 }
 
-
-########################################
-# CREATE THE DATASET OF EXPOSED
+##%######################################################%##
+#                                                          #
+####           CREATE THE DATASET OF EXPOSED            ####
+#                                                          #
+##%######################################################%##
 
 # Create an empty data frame
-data <- data.frame(person_id = 1:df_size, 
-                   age = rep(0, df_size), 
-                   COMORBIDITY = rep(0, df_size), 
-                   vax1_day = rep(NA, df_size), 
-                   SES = rep(NA, df_size),
-                   REGION = rep(NA, df_size)
-                   )
-
+df_data <- data.table::data.table(person_id = 1:df_size, 
+                                  age = 0, 
+                                  COMORBIDITY = 0, 
+                                  vax1_day = NA, 
+                                  SES = NA,
+                                  REGION = NA
+)
 
 # set ageband labels
 age_band_labels <- c()
-for (i in 1:(length(age_band_limits) - 1))  {
-  age_band_labels <- c(age_band_labels,paste0(as.character(age_band_limits[i]),"-",as.character(age_band_limits[i+1] - 1)) )
+for (i in 1:(length(age_band_limits)-1))  {
+  age_band_labels <- c(age_band_labels, paste0(age_band_limits[i], "-", age_band_limits[i+1] - 1))
 }
 if (add_older_ages){
-  age_band_labels <- c(age_band_labels,paste0(as.character(age_band_limits[length(age_band_limits)]),"+"))
+  age_band_labels <- c(age_band_labels, paste0(age_band_limits[length(age_band_limits)], "+"))
 }
 
 # Generate agebands based on the distribution
-data$Nageband <- sample(1:number_age_bands, df_size, replace = TRUE, prob = age_band_probabilities)
+df_data[, Nageband := sample(1:number_age_bands, df_size, replace = TRUE, prob = age_band_probabilities)]
 
 # Assign Ages Within Bands
-data$age <- sapply(data$Nageband, function(x) {
+df_data[, age := sapply(Nageband, function(x) {
   lower_limit <- age_band_limits_complete[x]
   upper_limit <- age_band_limits_complete[x + 1] 
   sample(seq(lower_limit, upper_limit), 1)
-})
+})]
 
 # Create a categorical variable based on age_band_labels
-data$ageband <- age_band_labels[data$Nageband]
-
+df_data[, ageband := age_band_labels[Nageband]]
 
 # Print distribution of age
-print(prop.table(table(data$age)))
-print(prop.table(table(data$ageband)))
+print(prop.table(table(df_data$age)))
+print(prop.table(table(df_data$ageband)))
 print(age_band_probabilities)
 
-
 # Generate binary variable COMORBIDITY based on probabilities
-data$COMORBIDITY <- sapply(data$Nageband, function(x) {
+df_data$COMORBIDITY <- sapply(df_data$Nageband, function(x) {
   probability <- frequency_COM[x]
   sample(c(0, 1), 1, prob = c(1 - probability, probability))
 })
 
 # Calculate prevalence rate of COMORBIDITY for each ageband
-prevalence_by_ageband <- tapply(data$COMORBIDITY, data$ageband, function(x) sum(x) / length(x))
+prevalence_by_ageband <- tapply(df_data$COMORBIDITY, df_data$ageband, function(x) sum(x) / length(x))
 print(prevalence_by_ageband)
 
 
 # Generate vax1_day variable based on age bands, means, and standard deviations
-data$vax1_day <- mapply(function(mean, sd, comorbidity) {
+df_data$vax1_day <- mapply(function(mean, sd, comorbidity) {
   if (comorbidity == 1) {
     # If COMORBIDITY == 1, introduce additional parameters
     cluster_prob <- vax1_day_comorbidity_cluster_prob
@@ -171,39 +172,39 @@ data$vax1_day <- mapply(function(mean, sd, comorbidity) {
     # If COMORBIDITY == 0, use the regular parameters
     round(rnorm(1, mean, sd))
   }
-}, vax1_day_age_band_means[data$Nageband], vax1_day_age_band_sd[data$Nageband], data$COMORBIDITY)
+}, vax1_day_age_band_means[df_data$Nageband], vax1_day_age_band_sd[df_data$Nageband], df_data$COMORBIDITY)
 
 
 # Identify a small sample of records with Nageband == 2 and lower vax1_day
-sample_size <- round(0.05 * sum(data$Nageband == 2))
-lower_vax1_day_indices <- sample(which(data$Nageband == 2), size = sample_size)
+sample_size <- round(0.05 * sum(df_data$Nageband == 2))
+lower_vax1_day_indices <- sample(which(df_data$Nageband == 2), size = sample_size)
 
 # Update the vax1_day values for the selected records
-data$vax1_day[lower_vax1_day_indices] <- round(rnorm(sample_size, 80, 30))
+df_data$vax1_day[lower_vax1_day_indices] <- round(rnorm(sample_size, 80, 30))
 
 
 # Clip the values to be within the specified range [vax1_day_min, vax1_day_max]
-data$vax1_day <- pmin(pmax(data$vax1_day, vax1_day_min), vax1_day_max)
+df_data$vax1_day <- pmin(pmax(df_data$vax1_day, vax1_day_min), vax1_day_max)
 
 
 # assign now the categorical variables
 for (cate in categorical_variables) {
   # Generate random values for the categorical variable
-  random_values <- sample(1:numvalues[[cate]], nrow(data), replace = TRUE)
+  random_values <- sample(1:numvalues[[cate]], nrow(df_data), replace = TRUE)
   
   # Assign the values to the dataframe
-  data[[cate]] <- as.factor(random_values)
+  df_data[[cate]] <- as.factor(random_values)
 }
 
 # this is the dataset of exposed
-exposed <- data
+exposed <- df_data
 
 # DATASET OF CANDIDATE MATCHES
 
 
 # consider first the exposed before exposure (only those whose vax1_day > 1)
 
-candidate_matches <- data[data$vax1_day > 1,]
+candidate_matches <- df_data[df_data$vax1_day > 1,]
 
 # Add new variables start and end to the data dataframe
 candidate_matches$start <- 1
@@ -219,12 +220,8 @@ maxgroup <- max(ceiling(occurrence_unexposed))
 filtered_candidate_matches$person_id_new <- (filtered_candidate_matches$person_id + df_size) * maxgroup
 
 # Create candidate_matches_add with a counter across copies
-candidate_matches_add <- filtered_candidate_matches %>%
-  group_by(person_id) %>%
-  slice(rep(1:n(), additional_unexposed)) %>%
-  mutate(counter = row_number())
+candidate_matches_add <- filtered_candidate_matches[rep(1:.N, additional_unexposed)][, counter := 1:.N, by = person_id]
 rm(filtered_candidate_matches)
-
 # modify person_id and verify it's a unique identifier
 
 candidate_matches_add$person_id_new <- candidate_matches_add$person_id_new + candidate_matches_add$counter
@@ -252,7 +249,7 @@ candidate_matches <- subset(candidate_matches,select = -additional_unexposed)
 
 #remove data
 
-rm(data)
+rm(df_data)
 
 # clean exposed and candidate_matches
 

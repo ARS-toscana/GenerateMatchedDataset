@@ -1,4 +1,4 @@
-person_id,study_entry,study_exit,start_record,end_record,CONTACT7,DIAB
+person_id,study_entry,study_exit,start_record,end_record,CONTACTS7,DIAB
 P01,1,500,1,500,0,0
 P02,1,500,1,9,0,1
 P02,1,500,10,22,1,1
