@@ -1,7 +1,13 @@
 rm(list=ls(all.names=TRUE))
 
-if (!require("dplyr")) install.packages("dplyr")
-library(dplyr)
+#set the directory where the script is saved as the working directory
+if (!require("rstudioapi")) install.packages("rstudioapi")
+thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+
+# load packages
+if (!require("data.table")) install.packages("data.table")
+library(data.table)
 
 #-------------------------------
 # Create dataset 
@@ -214,12 +220,8 @@ maxgroup <- max(ceiling(occurrence_unexposed))
 filtered_candidate_matches$person_id_new <- (filtered_candidate_matches$person_id + df_size) * maxgroup
 
 # Create candidate_matches_add with a counter across copies
-candidate_matches_add <- filtered_candidate_matches %>%
-  group_by(person_id) %>%
-  slice(rep(1:n(), additional_unexposed)) %>%
-  mutate(counter = row_number())
+candidate_matches_add <- filtered_candidate_matches[rep(1:.N, additional_unexposed)][, counter := 1:.N, by = person_id]
 rm(filtered_candidate_matches)
-
 # modify person_id and verify it's a unique identifier
 
 candidate_matches_add$person_id_new <- candidate_matches_add$person_id_new + candidate_matches_add$counter

@@ -9,8 +9,6 @@ thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 # load packages
 if (!require("data.table")) install.packages("data.table")
 library(data.table)
-if (!require("dplyr")) install.packages("dplyr")
-library(dplyr)
 
 
 # Store in a variable the size of the dataset
