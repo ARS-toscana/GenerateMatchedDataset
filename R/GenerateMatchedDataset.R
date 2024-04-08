@@ -163,7 +163,8 @@ GenerateMatchedDataset <- function(exposed,
     # TODO remove for release
     # exposed_filtered <- data.table::copy(exposed)
     # candidate_filtered <- data.table::copy(candidate_matches)
-    
+    data.table::setDT(exposed_filtered)
+    data.table::setDT(candidate_filtered)
     matched_df <- exposed_filtered[candidate_filtered, ..cols_after_join, on = join_rules, nomatch = NULL]
     
     # join_2 <- function() {
