@@ -21,23 +21,24 @@ GenerateMatchedDataset <- function(exposed,
                                    technical_details_of_matching = NULL,
                                    temporary_folder = NULL) {
   
-  if (is.null(names(variables_with_range_matching))) {
-    names(variables_with_range_matching) <- variables_with_range_matching
-  }
-  
-  data.table_threads <- data.table::getDTthreads()
-  
   # preamble <- "person_id != i.person_id & vax1_day >= start & vax1_day < end"
   
-  exact_strata_col <- if (!missing(variables_with_exact_matching)) "exact_strata" else c()
+  # Get number of threads to use for qs
+  data.table_threads <- data.table::getDTthreads()
   
+  names(variables_with_range_matching) <- variables_with_range_matching
+  exact_strata_col <- if (missing(variables_with_exact_matching)) stop("Please specify a variable for exact matching")
+  
+  # Remove columns not used during the matching and not primary keys
   # TODO write routine to minimize number of hash tables
   # TODO to prevent different number of rows create if possible single table from entire population
   excl_cols_exp <- setdiff(colnames(exposed), c(variables_with_exact_matching, variables_with_range_matching,
-                                                unit_of_observation, time_variable_in_exposed, time_variables_in_candidate_matches))
+                                                unit_of_observation, time_variable_in_exposed,
+                                                time_variables_in_candidate_matches))
   excl_cols_exp_real <- c(unit_of_observation, excl_cols_exp)
   excl_cols_cand <- setdiff(colnames(candidate_matches), c(variables_with_exact_matching, variables_with_range_matching,
-                                                           unit_of_observation, time_variables_in_candidate_matches, time_variable_in_exposed))
+                                                           unit_of_observation, time_variables_in_candidate_matches,
+                                                           time_variable_in_exposed))
   excl_cols_cand_real <- c(unit_of_observation, excl_cols_cand)
   
   qs::qsave(unique(candidate_matches[, ..excl_cols_cand_real]),
@@ -48,14 +49,19 @@ GenerateMatchedDataset <- function(exposed,
   exposed[, (excl_cols_exp) := NULL]
   rm(excl_cols_exp_real, excl_cols_cand_real)
   
+  # Recode using an hash table the variables with exact matching
   hash_table_exact <- unique(data.table::rbindlist(list(unique(exposed[, ..variables_with_exact_matching]),
-                                                        unique(candidate_matches[, ..variables_with_exact_matching]))))[, exact_strata := 1:.N]
+                                                        unique(candidate_matches[, ..variables_with_exact_matching]))))
+  hash_table_exact[, exact_strata := 1:.N]
   qs::qsave(hash_table_exact,
             file.path(temporary_folder, "HT_exact"), nthreads = data.table_threads)
   exposed <- exposed[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
   candidate_matches <- candidate_matches[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
   rm(hash_table_exact)
   
+  # Define a lower and upper boundaries for variables with ranges
+  # In exposed create variables for the boundaries
+  # Define the set of rules to be used during matching
   list_simple_ranges_rules <- list()
   if (!is.null(variables_with_range_matching)) {
     lower_boundaries <- unlist(range_of_variables_with_range_matching)[c(TRUE, FALSE)]
@@ -76,10 +82,12 @@ GenerateMatchedDataset <- function(exposed,
     upper_boundaries <- character(0)
   }
   
+  # Define the set of rules to be used during matching for variables with predefined intervals
   list_simple_ranges_rules <- append(list_simple_ranges_rules,
                                      list(paste0(time_variable_in_exposed, " <= ", time_variables_in_candidate_matches[[2]]),
                                           paste0(time_variable_in_exposed, " >= ", time_variables_in_candidate_matches[[1]])))
   
+  # Define join rules and column to be retained after the join
   strata_after_join <- c(unit_of_observation, paste0("i.", unit_of_observation))
   join_rules <- c(exact_strata_col, unlist(data.table::transpose(list_simple_ranges_rules)))
   cols_after_join <- c(strata_after_join, exact_strata_col,
@@ -89,8 +97,7 @@ GenerateMatchedDataset <- function(exposed,
     cols_after_join <- c(cols_after_join, paste0("x.", names(lower_boundaries)))
   }
   
-  
-  # Threshold calculation
+  # Calculate the theoretical number of combination of each exact strata
   exposed_tr <- exposed[, .N, by = exact_strata]
   candidate_tr <- candidate_matches[, .N, by = exact_strata]
   complete_tr <- exposed_tr[candidate_tr, .(exact_strata, N * i.N), on = "exact_strata", nomatch = NULL]
@@ -130,10 +137,11 @@ GenerateMatchedDataset <- function(exposed,
     return(group_assignment)
   }
   
-  # Apply the function to create the variable 'batch_number'
+  # Apply the function to create the variable 'batch_number' based on threshold
   complete_tr <- complete_tr[, .(exact_strata, batch_number = assign_groups(V2, threshold))]
   N_of_batches <- max(complete_tr[, batch_number])
   
+  # Save each batch in a separate file
   for (batch_n in 1:N_of_batches) {
     filtered_exact_strata <- complete_tr[batch_number == batch_n, exact_strata]
     qs::qsave(exposed[exact_strata %in% filtered_exact_strata],
@@ -142,104 +150,82 @@ GenerateMatchedDataset <- function(exposed,
               file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
   }
   rm(filtered_exact_strata)
-  unique_strata <- unique(data.table::rbindlist(list(exposed[, ..unit_of_observation],
+  
+  # Get unique UoO and then remove exposed and candidate_matches dataset since they are not used anymore
+  distinct_UoO <- unique(data.table::rbindlist(list(exposed[, ..unit_of_observation],
                                                      candidate_matches[, ..unit_of_observation])))
-  # TODO add for release
   rm(exposed, candidate_matches)
   
-  pop_size <- nrow(unique_strata)
+  # Generate samples of UoO and save them
   set.seed(123)
-  
+  pop_size <- nrow(distinct_UoO)
   for (i in 1:number_of_bootstrapping_samples) {
-    bootstrap_sample <- unique_strata[sample(.N, pop_size, replace = T)]
+    bootstrap_sample <- distinct_UoO[sample(.N, pop_size, replace = T)]
     data.table::setkeyv(bootstrap_sample, unit_of_observation)
     file_name <- file.path(temporary_folder, paste0("bootstrap_UoO_", i))
     qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
   }
+  rm(bootstrap_sample)
   
+  # For each batch calculate the bootstrap samples
   for (batch_n in 1:N_of_batches) {
+    
+    # Load batch
     exposed_filtered <- qs::qread(file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
     candidate_filtered <- qs::qread(file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
     
-    # TODO remove for release
-    # exposed_filtered <- data.table::copy(exposed)
-    # candidate_filtered <- data.table::copy(candidate_matches)
+    # IMPORTANT: necessary for the join in case 2+ variables with ranges
     data.table::setDT(exposed_filtered)
     data.table::setDT(candidate_filtered)
     
+    # Matching
     matched_df <- exposed_filtered[candidate_filtered, ..cols_after_join, on = join_rules, nomatch = NULL]
     
-    # join_2 <- function() {
-    # exposed_keyed <- data.table::copy(exposed)
-    # candidate_keyed <- data.table::copy(candidate_matches)[, age_1 := age]
-    # data.table::data.table::setkeyv(exposed_keyed, c("exact_strata", "lower_interval", "upper_interval"))
-    # data.table::data.table::setkeyv(candidate_keyed, c("exact_strata", "age_1", "age"))
-    # test_1 <- data.table::foverlaps(candidate_keyed, exposed_keyed)[, ..cols_after_join_1]
-    # data.table::setnames(test_1, c("lower_interval"), c("x.lower_interval"))
-    # # data.table::setorder(test_1, exact_strata, i.person_id, person_id)
-    # }
-    
-    # test_1 <- matched_df[matched[, ..strata_after_join], on = strata_after_join, nomatch = NULL]
-    
+    # Convert names related to range variables to what we want in the end
+    # Lower bound variables are retransformed to inital ones
     if (!is.null(variables_with_range_matching)) {
       data.table::setnames(matched_df, variables_with_range_matching, paste0("i.", variables_with_range_matching))
       data.table::setnames(matched_df, paste0("x.", names(lower_boundaries)), names(variables_with_range_matching))
       matched_df[, (names(variables_with_range_matching)) := lapply(Map(`-`, .SD, lower_boundaries), as.integer), .SDcols = names(variables_with_range_matching)]
     }
     
+    # Convert names related to time related variables to what we want in the end
     data.table::setnames(matched_df, time_variable_in_exposed, paste0("i.", time_variable_in_exposed))
     data.table::setnames(matched_df, paste0("x.", time_variable_in_exposed), time_variable_in_exposed)
     
-    data.table::setkeyv(matched_df, unit_of_observation)
-    
     set.seed(123)
+    
+    # Create the bootstrap sample and then extract a number of controls for each exposed
+    # Save the dataset
+    data.table::setkeyv(matched_df, unit_of_observation)
     for (i in 1:number_of_bootstrapping_samples) {
       bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_", i)), nthreads = data.table_threads)
       
+      # Create bootstrap sample
       # TODO revised here
       bootstrap_sample <- matched_df[bootstrap_sample, on = "person_id",
                                      nomatch = NULL][bootstrap_sample, on = c(i.person_id = "person_id"),
                                                      nomatch = NULL, allow.cartesian = T]
+      
+      # Extract a number of controls for each exposed
       bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))], by = "person_id"][[2]]]
+      
+      # Save the dataset
       file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", batch_n))
       qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
     }
-    
-    
-    
-    # number_of_bootstrapping_samples <- replicate(number_of_bootstrapping_samples,
-    #                                data.table::setorderv(unique_strata[sample(.N, pop_size, replace = T)], cols = unit_of_observation),
-    #                                simplify = FALSE)
-    
-    # folder <- file.path(getwd(), "test_with_simulated_data", "output_datasets")
-    # dir.create(folder, showWarnings = F, recursive = T)
-    
-    # data.table_threads <- data.table::getDTthreads()
-    # for (i in 1:length(number_of_bootstrapping_samples)) {
-    #   test_1 <- matched_df[number_of_bootstrapping_samples[[i]], on = "person_id",
-    #                        nomatch = NULL][number_of_bootstrapping_samples[[i]], on = c(i.person_id = "person_id"),
-    #                                        nomatch = NULL, allow.cartesian = T]
-    #   test_2 <- test_1[test_1[, .I[sample(.N, min(.N, sample_size_per_exposed))], by = "person_id"][[2]]]
-    #   file_name <- file.path(folder, paste0("bootstrap_", i, "_strata_", batch_n))
-    #   qs::qsave(test_2, file_name, nthreads = data.table_threads)
-    # }
-    
-    
-    
-    
-    # matched_df <- matched_df[hash_table_exact, on = c("exact_strata")][, exact_strata := NULL]
-    # matched_df <- matched_df[hash_table_excl_exp, on = c("person_id")]
-    # matched_df <- matched_df[hash_table_excl_cand, on = c("i.person_id == person_id")]
-    # data.table::setcolorder(matched_df, c(strata_after_join, "vax1_day", "start", "end", paste0("x.", names(lower_boundaries)),
-    #                                       "COMORBIDITY", variables_with_exact_matching, variables_with_range_matching, "i.COMORBIDITY", "i.vax1_day"))
   }
   
+  # Clean each dataset and combine them to from the complete bootstrap samples
   for (i in 1:number_of_bootstrapping_samples) {
+    
+    # Load and combine all batches of a single bootstrap sample
     tmp <- data.table::rbindlist(lapply(1:N_of_batches, function(x) {
       file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", batch_n))
       qs::qread(file_name, nthreads = data.table::getDTthreads())
     }))
     
+    # Add again excluded columns and single exact variables
     hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
     hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
     hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
@@ -248,6 +234,7 @@ GenerateMatchedDataset <- function(exposed,
     tmp <- tmp[hash_table_excl_exp, on = c("person_id"), nomatch = NULL]
     tmp <- tmp[hash_table_excl_cand, on = c("i.person_id == person_id"), nomatch = NULL]
     
+    # Helps in defining the colujmn order
     common_cols <- intersect(excl_cols_exp, excl_cols_cand)
     if (length(common_cols) > 0) {
       pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp), common_cols)
@@ -257,6 +244,7 @@ GenerateMatchedDataset <- function(exposed,
       post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand))
     }
     
+    # FInal column order
     if (!is.null(variables_with_range_matching)) {
       col_order_range_matching <- paste0("i.", variables_with_range_matching)
     } else {
@@ -265,9 +253,9 @@ GenerateMatchedDataset <- function(exposed,
     col_order <- c(strata_after_join, time_variable_in_exposed, time_variables_in_candidate_matches,
                    variables_with_range_matching, pre_cols, variables_with_exact_matching,
                    col_order_range_matching, post_cols)
-    
     data.table::setcolorder(tmp, col_order)
     
+    # Final save of bootstrap sample
     file_name <- file.path(temporary_folder, paste0("bootstrap_", i))
     qs::qsave(tmp, file_name, nthreads = data.table_threads)
   }
