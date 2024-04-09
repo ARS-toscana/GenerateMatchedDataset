@@ -1,3 +1,4 @@
+rm(list=ls(all.names=TRUE))
 source(file.path("R", "GenerateMatchedDataset.R"))
 
 GenerateMatchedDataset(exposed = data.table::fread("test_with_simulated_data/exposed_1000.csv"),
@@ -10,6 +11,6 @@ GenerateMatchedDataset(exposed = data.table::fread("test_with_simulated_data/exp
                        range_of_variables_with_range_matching = list(c(-1, 1)),
                        sample_size_per_exposed = 1,
                        number_of_bootstrapping_samples = 10,
-                       threshold = 200000,
+                       threshold = 2000000000,
                        temporary_folder = c("Example 2/temp"))
 
