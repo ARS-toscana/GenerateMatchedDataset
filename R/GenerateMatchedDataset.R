@@ -151,7 +151,8 @@ GenerateMatchedDataset <- function(exposed,
   set.seed(123)
   
   for (i in 1:number_of_bootstrapping_samples) {
-    bootstrap_sample <- data.table::setorderv(unique_strata[sample(.N, pop_size, replace = T)], cols = unit_of_observation)
+    bootstrap_sample <- unique_strata[sample(.N, pop_size, replace = T)]
+    data.table::setkeyv(bootstrap_sample, unit_of_observation)
     file_name <- file.path(temporary_folder, paste0("bootstrap_UoO_", i))
     qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
   }
@@ -165,13 +166,14 @@ GenerateMatchedDataset <- function(exposed,
     # candidate_filtered <- data.table::copy(candidate_matches)
     data.table::setDT(exposed_filtered)
     data.table::setDT(candidate_filtered)
+    
     matched_df <- exposed_filtered[candidate_filtered, ..cols_after_join, on = join_rules, nomatch = NULL]
     
     # join_2 <- function() {
     # exposed_keyed <- data.table::copy(exposed)
     # candidate_keyed <- data.table::copy(candidate_matches)[, age_1 := age]
-    # data.table::setkeyv(exposed_keyed, c("exact_strata", "lower_interval", "upper_interval"))
-    # data.table::setkeyv(candidate_keyed, c("exact_strata", "age_1", "age"))
+    # data.table::data.table::setkeyv(exposed_keyed, c("exact_strata", "lower_interval", "upper_interval"))
+    # data.table::data.table::setkeyv(candidate_keyed, c("exact_strata", "age_1", "age"))
     # test_1 <- data.table::foverlaps(candidate_keyed, exposed_keyed)[, ..cols_after_join_1]
     # data.table::setnames(test_1, c("lower_interval"), c("x.lower_interval"))
     # # data.table::setorder(test_1, exact_strata, i.person_id, person_id)
@@ -187,6 +189,8 @@ GenerateMatchedDataset <- function(exposed,
     
     data.table::setnames(matched_df, time_variable_in_exposed, paste0("i.", time_variable_in_exposed))
     data.table::setnames(matched_df, paste0("x.", time_variable_in_exposed), time_variable_in_exposed)
+    
+    data.table::setkeyv(matched_df, unit_of_observation)
     
     set.seed(123)
     for (i in 1:number_of_bootstrapping_samples) {
@@ -240,9 +244,9 @@ GenerateMatchedDataset <- function(exposed,
     hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
     hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
     
-    tmp <- tmp[hash_table_exact, on = c("exact_strata")][, exact_strata := NULL]
-    tmp <- tmp[hash_table_excl_exp, on = c("person_id")]
-    tmp <- tmp[hash_table_excl_cand, on = c("i.person_id == person_id")]
+    tmp <- tmp[hash_table_exact, on = c("exact_strata"), nomatch = NULL][, exact_strata := NULL]
+    tmp <- tmp[hash_table_excl_exp, on = c("person_id"), nomatch = NULL]
+    tmp <- tmp[hash_table_excl_cand, on = c("i.person_id == person_id"), nomatch = NULL]
     
     common_cols <- intersect(excl_cols_exp, excl_cols_cand)
     if (length(common_cols) > 0) {
@@ -258,8 +262,8 @@ GenerateMatchedDataset <- function(exposed,
     } else {
       col_order_range_matching <- character(0)
     }
-    col_order <- c(strata_after_join, time_variables_in_candidate_matches, time_variable_in_exposed,
-                   pre_cols, variables_with_range_matching, variables_with_exact_matching,
+    col_order <- c(strata_after_join, time_variable_in_exposed, time_variables_in_candidate_matches,
+                   variables_with_range_matching, pre_cols, variables_with_exact_matching,
                    col_order_range_matching, post_cols)
     
     data.table::setcolorder(tmp, col_order)
