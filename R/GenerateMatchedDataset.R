@@ -45,6 +45,8 @@ GenerateMatchedDataset <- function(exposed,
                                    temporary_folder = NULL) {
   
   # preamble <- "person_id != i.person_id & vax1_day >= start & vax1_day < end"
+  # TODO Transform UoO to integer
+  # TODO Add a join key parameter
   
   # Get number of threads to use for qs
   data.table_threads <- data.table::getDTthreads()
