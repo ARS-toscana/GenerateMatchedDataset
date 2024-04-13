@@ -204,8 +204,9 @@ GenerateMatchedDataset <- function(exposed,
       # Create bootstrap sample
       # TODO revised here
       bootstrap_sample <- matched_df[bootstrap_sample, on = "person_id",
-                                     nomatch = NULL][bootstrap_sample, on = c(i.person_id = "person_id"),
-                                                     nomatch = NULL, allow.cartesian = T]
+                                     nomatch = NULL, allow.cartesian = T][bootstrap_sample,
+                                                                          on = c(i.person_id = "person_id"),
+                                                                          nomatch = NULL, allow.cartesian = T]
       
       # Extract a number of controls for each exposed
       bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))], by = "person_id"][[2]]]
