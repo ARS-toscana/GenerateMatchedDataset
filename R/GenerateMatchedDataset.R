@@ -1,3 +1,26 @@
+#' @param exposed The exposed data table
+#' @param candidate_matches The candidate_matches data table
+#' @param unit_of_observation
+#' @param type_of_matching Decide the type of matching. Default to 'on variables'
+#' @param time_variable_in_exposed Variable containing the days UoO are exposed. 
+#' @param time_variables_in_candidate_matches Vector with variables containing the start and end when a UoO are candidate matches
+#' @param variables_with_exact_matching Vector of variable names to be matched exactly. 
+#' @param variables_with_range_matching Vector of variables to be matched in a range.
+#' @param range_of_variables_with_range_matching List of vectors. Each vector contains the range around where to match a variable defined in variables_with_range_matching. Follow the same order as variables_with_range_matching
+#' @param additional_matching_rules Additional rule to be used during matches
+#' @param rule_for_matching_on_dates "exact"
+#' @param output_matching Output folder and names. After we will append bootstrap number.
+#' seeds_for_sampling
+#' @param temporary_folder Folder where to store intermediate dataset. Default is NULL, if TRUE then the default folder is tempdir() otherwise it is possible to pass a custom path. If TRUE or custom path the function enter RAM saving mode.
+#' @param sample_size_per_exposed Number of controls to be matched for each exposed. Default is 1
+#' @param methodology_for_bootstrapping The default for this argument is NULL so no bootstrapping. Other options are "Sample exposed" and "Sample units of observations".
+#' @param number_of_bootstrapping_samples Number of bootstrap samples to be generated if methodology_for_bootstrapping is not NULL
+#' @param type_of_sampling With or without replacement
+#' @param exclude_sameUoO Do not match the same UoO
+#' @param algorithm_for_matching Algorithms to test. Possible values are "Naive", ...
+#' @param threshold Bin capacity to be used for creating bins based on the original dataset
+#' @param technical_details_of_matching
+
 GenerateMatchedDataset <- function(exposed,
                                    candidate_matches,
                                    unit_of_observation,
@@ -64,6 +87,7 @@ GenerateMatchedDataset <- function(exposed,
   # Define the set of rules to be used during matching
   list_simple_ranges_rules <- list()
   if (!is.null(variables_with_range_matching)) {
+    # TODO check names usage here
     lower_boundaries <- unlist(range_of_variables_with_range_matching)[c(TRUE, FALSE)]
     names(lower_boundaries) <- paste0("lower_interval_", names(variables_with_range_matching))
     upper_boundaries <- unlist(range_of_variables_with_range_matching)[c(FALSE, TRUE)]
@@ -103,6 +127,7 @@ GenerateMatchedDataset <- function(exposed,
   complete_tr <- exposed_tr[candidate_tr, .(exact_strata, N * i.N), on = "exact_strata", nomatch = NULL]
   
   group_integers <- function(values, threshold) {
+    
     names(values) <- 1:length(values)
     values <- sort(values, decreasing = TRUE) # Sort values in descending order
     
