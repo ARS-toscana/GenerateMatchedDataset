@@ -201,6 +201,7 @@ GenerateMatchedDataset <- function(exposed,
     qs::qsave(data.table::setkeyv(distinct_UoO[sample(.N, pop_size, replace = T)], unit_of_observation),
               file_name, nthreads = data.table_threads)
   }
+  rm(distinct_UoO)
   
   # For each batch calculate the bootstrap samples
   for (batch_n in 1:N_of_batches) {
@@ -297,4 +298,3 @@ GenerateMatchedDataset <- function(exposed,
     qs::qsave(tmp, file_name, nthreads = data.table_threads)
   }
 }
-
