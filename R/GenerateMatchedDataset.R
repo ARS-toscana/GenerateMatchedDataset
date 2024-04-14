@@ -129,6 +129,7 @@ GenerateMatchedDataset <- function(exposed,
   exposed_tr <- exposed[, .N, by = exact_strata]
   candidate_tr <- candidate_matches[, .N, by = exact_strata]
   complete_tr <- exposed_tr[candidate_tr, .(exact_strata, N * i.N), on = "exact_strata", nomatch = NULL]
+  rm(exposed_tr, candidate_tr)
   
   group_integers <- function(values, threshold) {
     
@@ -178,7 +179,7 @@ GenerateMatchedDataset <- function(exposed,
     qs::qsave(candidate_matches[exact_strata %in% filtered_exact_strata],
               file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
   }
-  rm(filtered_exact_strata)
+  rm(filtered_exact_strata, complete_tr)
   
   # Get unique UoO and then remove exposed and candidate_matches dataset since they are not used anymore
   distinct_UoO <- unique(data.table::rbindlist(list(exposed[, ..unit_of_observation],
@@ -216,6 +217,7 @@ GenerateMatchedDataset <- function(exposed,
     
     # Matching
     matched_df <- exposed_filtered[candidate_filtered, ..cols_after_join, on = join_rules, nomatch = NULL]
+    rm(candidate_filtered, exposed_filtered)
     
     # Convert names related to range variables to what we want in the end
     # Lower bound variables are retransformed to inital ones

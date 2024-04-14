@@ -114,6 +114,7 @@ GenerateMatchedDatasetNaive <- function(exposed,
   # TODO review here for naive strategy
   # Matching
   matched_df <- exposed_filtered[candidate_filtered, ..cols_after_join, on = join_rules, nomatch = NULL]
+  rm(exposed_filtered, candidate_filtered)
   
   # Convert names related to range variables to what we want in the end
   # Lower bound variables are retransformed to inital ones
