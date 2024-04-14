@@ -96,18 +96,16 @@ GenerateMatchedDatasetNaive <- function(exposed,
   seeds <- replicate(number_of_bootstrapping_samples, {
     sample(1:100, 1)
   }, simplify = T)
-  pop_size <- nrow(distinct_UoO)
   # TODO remove for release?
   data.table::setorderv(distinct_UoO, unit_of_observation)
-  bootstrap_samples <- lapply(1:number_of_bootstrapping_samples, function(x) {
-    set.seed(seeds[[x]])
-    data.table::setkeyv(distinct_UoO[sample(.N, pop_size, replace = T)], unit_of_observation)
-  })
-  # bootstrap_samples <- replicate(number_of_bootstrapping_samples, {
-  #   data.table::setkeyv(distinct_UoO[sample(.N, pop_size, replace = T)], unit_of_observation)
-  # }, simplify = FALSE)
-  bootstrap_sample_original <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_", 1)), nthreads = data.table_threads)
-  bootstrap_sample_naive <- bootstrap_samples[[1]]
+  pop_size <- nrow(distinct_UoO)
+  for (i in 1:number_of_bootstrapping_samples) {
+    set.seed(seeds[[i]])
+    file_name <- file.path(temporary_folder, paste0("bootstrap_UoO_naive_", i))
+    qs::qsave(data.table::setkeyv(distinct_UoO[sample(.N, pop_size, replace = T)], unit_of_observation),
+              file_name, nthreads = data.table_threads)
+  }
+  rm(distinct_UoO)
   
   # IMPORTANT: necessary for the join in case 2+ variables with ranges
   data.table::setDT(exposed_filtered)
@@ -135,17 +133,18 @@ GenerateMatchedDatasetNaive <- function(exposed,
   # Save the dataset
   data.table::setkeyv(matched_df, unit_of_observation)
   for (i in 1:number_of_bootstrapping_samples) {
+    bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_naive_", i)), nthreads = data.table_threads)
     
     # Create bootstrap sample
     # TODO review here
-    matched_boot <- matched_df[bootstrap_samples[[i]], on = "person_id",
-                             nomatch = NULL, allow.cartesian = T][bootstrap_samples[[i]],
-                                                                  on = c(i.person_id = "person_id"),
-                                                                  nomatch = NULL, allow.cartesian = T]
+    bootstrap_sample <- matched_df[bootstrap_sample, on = "person_id",
+                                   nomatch = NULL, allow.cartesian = T][bootstrap_sample,
+                                                                        on = c(i.person_id = "person_id"),
+                                                                        nomatch = NULL, allow.cartesian = T]
     
     # Extract a number of controls for each exposed
     # TODO change here for sampling
-    matched_boot <- matched_boot[matched_boot[, .I[sample(.N, min(.N, sample_size_per_exposed))], by = "person_id"][[2]]]
+    bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))], by = "person_id"][[2]]]
     
     # Helps in defining the column order
     common_cols <- intersect(excl_cols_exp, excl_cols_cand)
@@ -166,11 +165,11 @@ GenerateMatchedDatasetNaive <- function(exposed,
     col_order <- c(strata_after_join, time_variable_in_exposed, time_variables_in_candidate_matches,
                    variables_with_range_matching, pre_cols, variables_with_exact_matching,
                    col_order_range_matching, post_cols)
-    data.table::setcolorder(matched_boot, col_order)
+    data.table::setcolorder(bootstrap_sample, col_order)
     
     # Final save of bootstrap sample
     file_name <- file.path(output_matching, paste0("bootstrap_naive_", i))
-    qs::qsave(matched_boot, file_name, nthreads = data.table_threads)
-    rm(matched_boot)
+    qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
+    rm(bootstrap_sample)
   }
 }
