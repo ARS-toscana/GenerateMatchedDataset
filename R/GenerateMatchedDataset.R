@@ -17,7 +17,7 @@
 #' @param number_of_bootstrapping_samples Number of bootstrap samples to be generated if methodology_for_bootstrapping is not NULL
 #' @param type_of_sampling With or without replacement
 #' @param exclude_sameUoO Do not match the same UoO
-#' @param algorithm_for_matching Algorithms to test. Possible values are "Naive", ...
+#' @param algorithm_for_matching Algorithms to test. Possible values are "naive", ...
 #' @param threshold Bin capacity to be used for creating bins based on the original dataset
 #' @param technical_details_of_matching
 
@@ -47,12 +47,14 @@ GenerateMatchedDataset <- function(exposed,
   # preamble <- "person_id != i.person_id & vax1_day >= start & vax1_day < end"
   # TODO Transform UoO to integer
   # TODO Add a join key parameter
+  # TODO clean temporaary dataset after loading them to save space
   
   # Get number of threads to use for qs
   data.table_threads <- data.table::getDTthreads()
   
   names(variables_with_range_matching) <- variables_with_range_matching
-  exact_strata_col <- if (missing(variables_with_exact_matching)) stop("Please specify a variable for exact matching")
+  exact_strata_col <- if (missing(variables_with_exact_matching)) {
+    stop("Please specify a variable for exact matching")} else "exact_strata"
   
   # Remove columns not used during the matching and not primary keys
   # TODO write routine to minimize number of hash tables
@@ -184,15 +186,21 @@ GenerateMatchedDataset <- function(exposed,
   rm(exposed, candidate_matches)
   
   # Generate samples of UoO and save them
+  # TODO change here for sampling
+  # TODO set seed for bootstrap sampling
   set.seed(123)
+  seeds <- replicate(number_of_bootstrapping_samples, {
+    sample(1:100, 1)
+  }, simplify = T)
+  # TODO remove for release?
+  data.table::setorderv(distinct_UoO, unit_of_observation)
   pop_size <- nrow(distinct_UoO)
   for (i in 1:number_of_bootstrapping_samples) {
-    bootstrap_sample <- distinct_UoO[sample(.N, pop_size, replace = T)]
-    data.table::setkeyv(bootstrap_sample, unit_of_observation)
+    set.seed(seeds[[i]])
     file_name <- file.path(temporary_folder, paste0("bootstrap_UoO_", i))
-    qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
+    qs::qsave(data.table::setkeyv(distinct_UoO[sample(.N, pop_size, replace = T)], unit_of_observation),
+              file_name, nthreads = data.table_threads)
   }
-  rm(bootstrap_sample)
   
   # For each batch calculate the bootstrap samples
   for (batch_n in 1:N_of_batches) {
@@ -229,13 +237,14 @@ GenerateMatchedDataset <- function(exposed,
       bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_", i)), nthreads = data.table_threads)
       
       # Create bootstrap sample
-      # TODO revised here
+      # TODO review here
       bootstrap_sample <- matched_df[bootstrap_sample, on = "person_id",
                                      nomatch = NULL, allow.cartesian = T][bootstrap_sample,
                                                                           on = c(i.person_id = "person_id"),
                                                                           nomatch = NULL, allow.cartesian = T]
       
       # Extract a number of controls for each exposed
+      # TODO change here for sampling
       bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))], by = "person_id"][[2]]]
       
       # Save the dataset
@@ -262,7 +271,7 @@ GenerateMatchedDataset <- function(exposed,
     tmp <- tmp[hash_table_excl_exp, on = c("person_id"), nomatch = NULL]
     tmp <- tmp[hash_table_excl_cand, on = c("i.person_id == person_id"), nomatch = NULL]
     
-    # Helps in defining the colujmn order
+    # Helps in defining the column order
     common_cols <- intersect(excl_cols_exp, excl_cols_cand)
     if (length(common_cols) > 0) {
       pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp), common_cols)
@@ -272,7 +281,7 @@ GenerateMatchedDataset <- function(exposed,
       post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand))
     }
     
-    # FInal column order
+    # Final column order
     if (!is.null(variables_with_range_matching)) {
       col_order_range_matching <- paste0("i.", variables_with_range_matching)
     } else {
@@ -284,7 +293,7 @@ GenerateMatchedDataset <- function(exposed,
     data.table::setcolorder(tmp, col_order)
     
     # Final save of bootstrap sample
-    file_name <- file.path(temporary_folder, paste0("bootstrap_", i))
+    file_name <- file.path(output_matching, paste0("bootstrap_", i))
     qs::qsave(tmp, file_name, nthreads = data.table_threads)
   }
 }
