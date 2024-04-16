@@ -261,7 +261,7 @@ GenerateMatchedDataset <- function(exposed,
     
     # Load and combine all batches of a single bootstrap sample
     tmp <- data.table::rbindlist(lapply(1:N_of_batches, function(x) {
-      file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", batch_n))
+      file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", x))
       qs::qread(file_name, nthreads = data.table::getDTthreads())
     }))
     
