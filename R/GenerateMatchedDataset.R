@@ -111,13 +111,15 @@ GenerateMatchedDataset <- function(exposed,
   }
   
   # Define the set of rules to be used during matching for variables with predefined intervals
-  list_simple_ranges_rules <- append(list_simple_ranges_rules,
-                                     list(paste0(time_variable_in_exposed, " <= ", time_variables_in_candidate_matches[[2]]),
-                                          paste0(time_variable_in_exposed, " >= ", time_variables_in_candidate_matches[[1]])))
+  list_time_ranges_rules <- list()
+  list_time_ranges_rules <- append(list_time_ranges_rules,
+                                   list(paste0(time_variable_in_exposed, " <= ", time_variables_in_candidate_matches[[2]]),
+                                        paste0(time_variable_in_exposed, " >= ", time_variables_in_candidate_matches[[1]])))
   
   # Define join rules and column to be retained after the join
   strata_after_join <- c(unit_of_observation, paste0("i.", unit_of_observation))
-  join_rules <- c(exact_strata_col, unlist(data.table::transpose(list_simple_ranges_rules)))
+  join_rules <- c(exact_strata_col, unlist(data.table::transpose(list_simple_ranges_rules)),
+                  unlist(data.table::transpose(list_time_ranges_rules)))
   cols_after_join <- c(strata_after_join, exact_strata_col,
                        variables_with_range_matching, time_variable_in_exposed, time_variables_in_candidate_matches,
                        paste0("x.", time_variable_in_exposed))
@@ -126,9 +128,15 @@ GenerateMatchedDataset <- function(exposed,
   }
   
   # Calculate the theoretical number of combination of each exact strata
-  exposed_tr <- exposed[, .N, by = exact_strata]
-  candidate_tr <- candidate_matches[, .N, by = exact_strata]
-  complete_tr <- exposed_tr[candidate_tr, .(exact_strata, N * i.N), on = "exact_strata", nomatch = NULL]
+  exposed_tr <- exposed[, .N, by = c("exact_strata", names(lower_boundaries), names(upper_boundaries))]
+  candidate_tr <- candidate_matches[, .N, by = c("exact_strata", variables_with_range_matching)]
+  cols_to_include <- c("exact_strata", variables_with_range_matching,
+                       paste0("x.", c(names(lower_boundaries), names(upper_boundaries))), "N", "i.N")
+  smaller_join_rules <- c(exact_strata_col, unlist(data.table::transpose(list_simple_ranges_rules)))
+  complete_tr <- exposed_tr[candidate_tr, ..cols_to_include, on = smaller_join_rules, nomatch = NULL]
+  data.table::setnames(complete_tr, paste0("x.", c(names(lower_boundaries), names(upper_boundaries))),
+                       c(names(lower_boundaries), names(upper_boundaries)))
+  complete_tr[, V2 := N * i.N][, c("N", "i.N") := NULL]
   rm(exposed_tr, candidate_tr)
   
   group_integers <- function(values, threshold) {
@@ -168,15 +176,35 @@ GenerateMatchedDataset <- function(exposed,
   }
   
   # Apply the function to create the variable 'batch_number' based on threshold
-  complete_tr <- complete_tr[, .(exact_strata, batch_number = assign_groups(V2, threshold))]
+  complete_tr <- complete_tr[, V2 := assign_groups(V2, threshold)]
+  data.table::setnames(complete_tr, "V2", "batch_number")
   N_of_batches <- max(complete_tr[, batch_number])
   
   # Save each batch in a separate file
   for (batch_n in 1:N_of_batches) {
-    filtered_exact_strata <- complete_tr[batch_number == batch_n, exact_strata]
-    qs::qsave(exposed[exact_strata %in% filtered_exact_strata],
+  #  filtered_exact_strata <- unlist(unique(complete_tr[batch_number == batch_n, ..col_to_filter]), use.names = F)
+    browser()
+    
+    AndIN = function(cond){
+      Reduce(
+        function(x, y) call("&", call("(",x), call("(",y)),
+        lapply(names(cond), function(var) call("%in%", as.name(var), cond[[var]]))
+      )
+    }
+    cond_exp <- list()
+    for (col_to_filter in intersect(setdiff(colnames(complete_tr), "batch_number"), colnames(exposed))) {
+      cond_exp[[col_to_filter]] <- unlist(unique(complete_tr[batch_number == batch_n, ..col_to_filter]),
+                                          use.names = F)
+    }
+    cond_cand <- list()
+    for (col_to_filter in intersect(setdiff(colnames(complete_tr), "batch_number"), colnames(candidate_matches))) {
+      cond_cand[[col_to_filter]] <- unlist(unique(complete_tr[batch_number == batch_n, ..col_to_filter]),
+                                           use.names = F)
+    }
+    
+    qs::qsave(exposed[eval(AndIN(cond_exp))],
               file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
-    qs::qsave(candidate_matches[exact_strata %in% filtered_exact_strata],
+    qs::qsave(candidate_matches[eval(AndIN(cond_cand))],
               file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
   }
   rm(filtered_exact_strata, complete_tr)
