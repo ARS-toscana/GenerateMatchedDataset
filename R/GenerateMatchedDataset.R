@@ -137,6 +137,8 @@ GenerateMatchedDataset <- function(exposed,
   data.table::setnames(complete_tr, paste0("x.", c(names(lower_boundaries), names(upper_boundaries))),
                        c(names(lower_boundaries), names(upper_boundaries)))
   complete_tr[, V2 := N * i.N][, c("N", "i.N") := NULL]
+  smaller_HT <- data.table::copy(complete_tr)[, V2 := NULL]
+  complete_tr <- complete_tr[, .(V2 = sum(V2)), by = c("exact_strata", variables_with_range_matching)]
   rm(exposed_tr, candidate_tr)
   
   group_integers <- function(values, threshold) {
@@ -179,35 +181,21 @@ GenerateMatchedDataset <- function(exposed,
   complete_tr <- complete_tr[, V2 := assign_groups(V2, threshold)]
   data.table::setnames(complete_tr, "V2", "batch_number")
   N_of_batches <- max(complete_tr[, batch_number])
+
+  complete_tr <- smaller_HT[complete_tr, on = intersect(colnames(smaller_HT), colnames(complete_tr))]
+  rm(smaller_HT)
   
   # Save each batch in a separate file
   for (batch_n in 1:N_of_batches) {
-  #  filtered_exact_strata <- unlist(unique(complete_tr[batch_number == batch_n, ..col_to_filter]), use.names = F)
-    browser()
     
-    AndIN = function(cond){
-      Reduce(
-        function(x, y) call("&", call("(",x), call("(",y)),
-        lapply(names(cond), function(var) call("%in%", as.name(var), cond[[var]]))
-      )
-    }
-    cond_exp <- list()
-    for (col_to_filter in intersect(setdiff(colnames(complete_tr), "batch_number"), colnames(exposed))) {
-      cond_exp[[col_to_filter]] <- unlist(unique(complete_tr[batch_number == batch_n, ..col_to_filter]),
-                                          use.names = F)
-    }
-    cond_cand <- list()
-    for (col_to_filter in intersect(setdiff(colnames(complete_tr), "batch_number"), colnames(candidate_matches))) {
-      cond_cand[[col_to_filter]] <- unlist(unique(complete_tr[batch_number == batch_n, ..col_to_filter]),
-                                           use.names = F)
-    }
-    
-    qs::qsave(exposed[eval(AndIN(cond_exp))],
+    qs::qsave(exposed[complete_tr[batch_number == batch_n, ],
+                      on = intersect(colnames(complete_tr), colnames(exposed))],
               file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
-    qs::qsave(candidate_matches[eval(AndIN(cond_cand))],
+    qs::qsave(candidate_matches[complete_tr[batch_number == batch_n, ],
+                                on = intersect(colnames(complete_tr), colnames(candidate_matches))],
               file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
   }
-  rm(filtered_exact_strata, complete_tr)
+  rm(complete_tr)
   
   # Get unique UoO and then remove exposed and candidate_matches dataset since they are not used anymore
   distinct_UoO <- unique(data.table::rbindlist(list(exposed[, ..unit_of_observation],
