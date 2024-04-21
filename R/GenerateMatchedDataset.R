@@ -138,7 +138,7 @@ GenerateMatchedDataset <- function(exposed,
                        c(names(lower_boundaries), names(upper_boundaries)))
   complete_tr[, V2 := N * i.N][, c("N", "i.N") := NULL]
   smaller_HT <- data.table::copy(complete_tr)[, V2 := NULL]
-  complete_tr <- complete_tr[, .(V2 = sum(V2)), by = c("exact_strata", variables_with_range_matching)]
+  complete_tr <- complete_tr[, .(V2 = sum(V2)), by = c("exact_strata", names(lower_boundaries), names(upper_boundaries))]
   rm(exposed_tr, candidate_tr)
   
   group_integers <- function(values, threshold) {
@@ -187,11 +187,12 @@ GenerateMatchedDataset <- function(exposed,
   
   # Save each batch in a separate file
   for (batch_n in 1:N_of_batches) {
-    
-    qs::qsave(exposed[complete_tr[batch_number == batch_n, ],
+    cols_exp <- colnames(exposed)
+    qs::qsave(exposed[complete_tr[batch_number == batch_n, ], ..cols_exp,
                       on = intersect(colnames(complete_tr), colnames(exposed))],
               file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
-    qs::qsave(candidate_matches[complete_tr[batch_number == batch_n, ],
+    cols_cand <- colnames(candidate_matches)
+    qs::qsave(candidate_matches[complete_tr[batch_number == batch_n, ], ..cols_cand,
                                 on = intersect(colnames(complete_tr), colnames(candidate_matches))],
               file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
   }
