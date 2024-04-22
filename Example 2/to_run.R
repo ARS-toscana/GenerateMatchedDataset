@@ -49,6 +49,9 @@ GenerateMatchedDatasetHT(exposed = data.table::fread("test_with_simulated_data/e
                          temporary_folder = c("Example 2/g_intermediate"),
                          output_matching = c("Example 2/g_output"))
 
+# the output and intermediat datasets are stored in the format of the qs package
+# to read the output, use the following routines in the qs package
+
 bootstrap_sample_original <- qs::qread(file.path("Example 2/g_output", paste0("bootstrap_", 1)))
 bootstrap_sample_naive <- qs::qread(file.path("Example 2/g_output", paste0("bootstrap_naive_", 1)))
 bootstrap_sample_HT <- qs::qread(file.path("Example 2/g_output", paste0("bootstrap_HT_", 1)))
