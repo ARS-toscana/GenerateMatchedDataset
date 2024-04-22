@@ -129,7 +129,9 @@ GenerateMatchedDataset <- function(exposed,
   
   # Calculate the theoretical number of combination of each exact strata
   exposed_tr <- exposed[, .N, by = c("exact_strata", names(lower_boundaries), names(upper_boundaries))]
+  exposed_tr[, N := as.numeric(N)]
   candidate_tr <- candidate_matches[, .N, by = c("exact_strata", variables_with_range_matching)]
+  exposed_tr[, N := as.numeric(N)]
   cols_to_include <- c("exact_strata", variables_with_range_matching,
                        paste0("x.", c(names(lower_boundaries), names(upper_boundaries))), "N", "i.N")
   smaller_join_rules <- c(exact_strata_col, unlist(data.table::transpose(list_simple_ranges_rules)))
@@ -146,9 +148,9 @@ GenerateMatchedDataset <- function(exposed,
     names(values) <- 1:length(values)
     # values <- sort(values, decreasing = TRUE) # Sort values in descending order
     
-    groups_idx <- list(list("sum" = 0, "indices" = c()))
+    groups_idx <- list(list("sum" = values[[names(values)[[1]]]], "indices" = c(names(values)[[1]])))
     
-    for (val in names(values)) {
+    for (val in names(values)[2:length(names(values))]) {
       
       which_less_thr <- which(sapply(groups_idx, `[[`, 1) + values[[val]] <= threshold)
       
@@ -178,7 +180,6 @@ GenerateMatchedDataset <- function(exposed,
   }
   
   # Apply the function to create the variable 'batch_number' based on threshold
-  
   data.table::setorderv(complete_tr, c("exact_strata", names(lower_boundaries), "V2"))
   complete_tr <- complete_tr[, V2 := assign_groups(V2, threshold)]
   data.table::setnames(complete_tr, "V2", "batch_number")
