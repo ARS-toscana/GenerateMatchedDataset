@@ -144,7 +144,7 @@ GenerateMatchedDataset <- function(exposed,
   group_integers <- function(values, threshold) {
     
     names(values) <- 1:length(values)
-    values <- sort(values, decreasing = TRUE) # Sort values in descending order
+    # values <- sort(values, decreasing = TRUE) # Sort values in descending order
     
     groups_idx <- list(list("sum" = 0, "indices" = c()))
     
@@ -178,6 +178,8 @@ GenerateMatchedDataset <- function(exposed,
   }
   
   # Apply the function to create the variable 'batch_number' based on threshold
+  
+  data.table::setorderv(complete_tr, c("exact_strata", names(lower_boundaries), "V2"))
   complete_tr <- complete_tr[, V2 := assign_groups(V2, threshold)]
   data.table::setnames(complete_tr, "V2", "batch_number")
   N_of_batches <- max(complete_tr[, batch_number])
@@ -189,11 +191,12 @@ GenerateMatchedDataset <- function(exposed,
   for (batch_n in 1:N_of_batches) {
     cols_exp <- colnames(exposed)
     qs::qsave(exposed[complete_tr[batch_number == batch_n, ], ..cols_exp,
-                      on = intersect(colnames(complete_tr), colnames(exposed))],
+                      on = intersect(colnames(complete_tr), colnames(exposed)), allow.cartesian = TRUE],
               file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
     cols_cand <- colnames(candidate_matches)
     qs::qsave(candidate_matches[complete_tr[batch_number == batch_n, ], ..cols_cand,
-                                on = intersect(colnames(complete_tr), colnames(candidate_matches))],
+                                on = intersect(colnames(complete_tr), colnames(candidate_matches)),
+                                allow.cartesian = TRUE],
               file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
   }
   rm(complete_tr)
