@@ -191,13 +191,14 @@ GenerateMatchedDataset <- function(exposed,
   # Save each batch in a separate file
   for (batch_n in 1:N_of_batches) {
     cols_exp <- colnames(exposed)
-    qs::qsave(exposed[complete_tr[batch_number == batch_n, ], ..cols_exp,
-                      on = intersect(colnames(complete_tr), colnames(exposed)), allow.cartesian = TRUE],
+    cols_to_keep <- intersect(colnames(complete_tr), colnames(exposed))
+    qs::qsave(exposed[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_exp,
+                      on = cols_to_keep, allow.cartesian = TRUE],
               file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
     cols_cand <- colnames(candidate_matches)
-    qs::qsave(candidate_matches[complete_tr[batch_number == batch_n, ], ..cols_cand,
-                                on = intersect(colnames(complete_tr), colnames(candidate_matches)),
-                                allow.cartesian = TRUE],
+    cols_to_keep <- intersect(colnames(complete_tr), colnames(candidate_matches))
+    qs::qsave(candidate_matches[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_cand,
+                                on = cols_to_keep, allow.cartesian = TRUE],
               file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
   }
   rm(complete_tr)
