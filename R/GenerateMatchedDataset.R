@@ -46,6 +46,7 @@ GenerateMatchedDataset <- function(exposed,
   
   # preamble <- "person_id != i.person_id & vax1_day >= start & vax1_day < end"
   # TODO Transform UoO to integer
+  # TODO add preamble
   # TODO Add a join key parameter
   # TODO clean temporaary dataset after loading them to save space
   # Get number of threads to use for qs
@@ -64,19 +65,24 @@ GenerateMatchedDataset <- function(exposed,
                                                            unit_of_observation, time_variables_in_candidate_matches,
                                                            time_variable_in_exposed))
   excl_cols_cand_real <- c(unit_of_observation, excl_cols_cand)
+
+  if (!identical(excl_cols_exp, character(0))) {
+    qs::qsave(unique(exposed[, ..excl_cols_exp_real]),
+              file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table_threads)
+    exposed[, (excl_cols_exp) := NULL]
+  }
+  if (!identical(excl_cols_cand, character(0))) {
+    qs::qsave(unique(candidate_matches[, ..excl_cols_cand_real]),
+              file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table_threads)
+    candidate_matches[, (excl_cols_cand) := NULL]
+  }
   
-  qs::qsave(unique(candidate_matches[, ..excl_cols_cand_real]),
-            file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table_threads)
-  candidate_matches[, (excl_cols_cand) := NULL]
-  qs::qsave(unique(exposed[, ..excl_cols_exp_real]),
-            file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table_threads)
-  exposed[, (excl_cols_exp) := NULL]
   rm(excl_cols_exp_real, excl_cols_cand_real)
   
   # Recode using an hash table the variables with exact matching
   # Check if exact strata columns are defined
   exact_strata_col <- character()
-  if (!missing(variables_with_exact_matching)) {
+  if (!is.null(variables_with_exact_matching)) {
     exact_strata_col <- "exact_strata"
     
     hash_table_exact <- unique(data.table::rbindlist(list(unique(exposed[, ..variables_with_exact_matching]),
@@ -127,11 +133,11 @@ GenerateMatchedDataset <- function(exposed,
   if (!is.null(variables_with_range_matching)) cols_after_join <- c(cols_after_join, paste0("x.", names(lower_boundaries)))
   
   # Calculate the theoretical number of combination of each exact strata
-  exposed_tr <- exposed[, .N, by = c("exact_strata", names(lower_boundaries), names(upper_boundaries))]
+  exposed_tr <- exposed[, .N, by = c(exact_strata_col, names(lower_boundaries), names(upper_boundaries))]
   exposed_tr[, N := as.numeric(N)]
-  candidate_tr <- candidate_matches[, .N, by = c("exact_strata", variables_with_range_matching)]
+  candidate_tr <- candidate_matches[, .N, by = c(exact_strata_col, variables_with_range_matching)]
   exposed_tr[, N := as.numeric(N)]
-  cols_to_include <- c("exact_strata", variables_with_range_matching,
+  cols_to_include <- c(exact_strata_col, variables_with_range_matching,
                        paste0("x.", c(names(lower_boundaries), names(upper_boundaries))), "N", "i.N")
   smaller_join_rules <- c(exact_strata_col, unlist(data.table::transpose(list_simple_ranges_rules)))
   complete_tr <- exposed_tr[candidate_tr, ..cols_to_include, on = smaller_join_rules, nomatch = NULL]
@@ -139,7 +145,7 @@ GenerateMatchedDataset <- function(exposed,
                        c(names(lower_boundaries), names(upper_boundaries)))
   complete_tr[, V2 := N * i.N][, c("N", "i.N") := NULL]
   smaller_HT <- data.table::copy(complete_tr)[, V2 := NULL]
-  complete_tr <- complete_tr[, .(V2 = sum(V2)), by = c("exact_strata", names(lower_boundaries), names(upper_boundaries))]
+  complete_tr <- complete_tr[, .(V2 = sum(V2)), by = c(exact_strata_col, names(lower_boundaries), names(upper_boundaries))]
   rm(exposed_tr, candidate_tr)
   
   group_integers <- function(values, threshold) {
@@ -179,7 +185,7 @@ GenerateMatchedDataset <- function(exposed,
   }
   
   # Apply the function to create the variable 'batch_number' based on threshold
-  data.table::setorderv(complete_tr, c("exact_strata", names(lower_boundaries), "V2"))
+  data.table::setorderv(complete_tr, c(exact_strata_col, names(lower_boundaries), "V2"))
   complete_tr <- complete_tr[, V2 := assign_groups(V2, threshold)]
   data.table::setnames(complete_tr, "V2", "batch_number")
   N_of_batches <- max(complete_tr[, batch_number])
@@ -249,8 +255,10 @@ GenerateMatchedDataset <- function(exposed,
     }
     
     # Convert names related to time related variables to what we want in the end
-    data.table::setnames(matched_df, time_variable_in_exposed, paste0("i.", time_variable_in_exposed))
-    data.table::setnames(matched_df, paste0("x.", time_variable_in_exposed), time_variable_in_exposed)
+    if (!is.null(time_variable_in_exposed)) {
+      data.table::setnames(matched_df, time_variable_in_exposed, paste0("i.", time_variable_in_exposed))
+      data.table::setnames(matched_df, paste0("x.", time_variable_in_exposed), time_variable_in_exposed)
+    }
     
     set.seed(123)
     
@@ -260,16 +268,20 @@ GenerateMatchedDataset <- function(exposed,
     for (i in 1:number_of_bootstrapping_samples) {
       bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_", i)), nthreads = data.table_threads)
       
+      c(unit_of_observation, paste0("i.", unit_of_observation))
+      
       # Create bootstrap sample
       # TODO review here
-      bootstrap_sample <- matched_df[bootstrap_sample, on = "person_id",
+      bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
                                      nomatch = NULL, allow.cartesian = T][bootstrap_sample,
-                                                                          on = c(i.person_id = "person_id"),
+                                                                          on = paste(paste0("i.", unit_of_observation), "==",
+                                                                                     unit_of_observation, collapse = ", "),
                                                                           nomatch = NULL, allow.cartesian = T]
       
       # Extract a number of controls for each exposed
       # TODO change here for sampling
-      bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))], by = "person_id"][[2]]]
+      bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
+                                                            by = unit_of_observation][[2]]]
       
       # Save the dataset
       file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", batch_n))
@@ -289,13 +301,22 @@ GenerateMatchedDataset <- function(exposed,
     }))
     
     # Add again excluded columns and single exact variables
-    hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
-    hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
-    hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
+    if (!is.null(variables_with_exact_matching)){
+      hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
+      tmp <- tmp[hash_table_exact, on = c(exact_strata_col), nomatch = NULL][, exact_strata := NULL]
+    }
+    rm(hash_table_exact)
     
-    tmp <- tmp[hash_table_exact, on = c("exact_strata"), nomatch = NULL][, exact_strata := NULL]
-    tmp <- tmp[hash_table_excl_exp, on = c("person_id"), nomatch = NULL]
-    tmp <- tmp[hash_table_excl_cand, on = c("i.person_id == person_id"), nomatch = NULL]
+    if (!identical(excl_cols_exp, character(0))) {
+      hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
+      tmp <- tmp[hash_table_excl_exp, on = unit_of_observation, nomatch = NULL]
+    }
+    
+    if (!identical(excl_cols_cand, character(0))) {
+      hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
+      tmp <- tmp[hash_table_excl_cand, on = paste(paste0("i.", unit_of_observation), "==", unit_of_observation,
+                                                  collapse = ", "), nomatch = NULL]
+    }
     
     # Helps in defining the column order
     common_cols <- intersect(excl_cols_exp, excl_cols_cand)
