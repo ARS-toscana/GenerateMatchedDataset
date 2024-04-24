@@ -196,17 +196,17 @@ GenerateMatchedDataset <- function(exposed,
   # Save each batch in a separate file
   for (batch_n in 1:N_of_batches) {
     cols_exp <- colnames(exposed)
-    cols_to_keep <- intersect(colnames(complete_tr), colnames(exposed))
+    cols_to_keep <- intersect(colnames(complete_tr), cols_exp)
     qs::qsave(exposed[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_exp,
                       on = cols_to_keep, allow.cartesian = TRUE],
               file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
     cols_cand <- colnames(candidate_matches)
-    cols_to_keep <- intersect(colnames(complete_tr), colnames(candidate_matches))
+    cols_to_keep <- intersect(colnames(complete_tr), cols_cand)
     qs::qsave(candidate_matches[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_cand,
                                 on = cols_to_keep, allow.cartesian = TRUE],
               file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
   }
-  rm(complete_tr)
+  rm(complete_tr, cols_exp, cols_cand, cols_to_keep)
   
   # Get unique UoO and then remove exposed and candidate_matches dataset since they are not used anymore
   distinct_UoO <- unique(data.table::rbindlist(list(exposed[, ..unit_of_observation],
