@@ -48,13 +48,10 @@ GenerateMatchedDataset <- function(exposed,
   # TODO Transform UoO to integer
   # TODO Add a join key parameter
   # TODO clean temporaary dataset after loading them to save space
-  
   # Get number of threads to use for qs
   data.table_threads <- data.table::getDTthreads()
   
   names(variables_with_range_matching) <- variables_with_range_matching
-  exact_strata_col <- if (missing(variables_with_exact_matching)) {
-    stop("Please specify a variable for exact matching")} else "exact_strata"
   
   # Remove columns not used during the matching and not primary keys
   # TODO write routine to minimize number of hash tables
@@ -77,19 +74,28 @@ GenerateMatchedDataset <- function(exposed,
   rm(excl_cols_exp_real, excl_cols_cand_real)
   
   # Recode using an hash table the variables with exact matching
-  hash_table_exact <- unique(data.table::rbindlist(list(unique(exposed[, ..variables_with_exact_matching]),
-                                                        unique(candidate_matches[, ..variables_with_exact_matching]))))
-  hash_table_exact[, exact_strata := 1:.N]
-  qs::qsave(hash_table_exact,
-            file.path(temporary_folder, "HT_exact"), nthreads = data.table_threads)
-  exposed <- exposed[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
-  candidate_matches <- candidate_matches[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
-  rm(hash_table_exact)
+  # Check if exact strata columns are defined
+  exact_strata_col <- character()
+  if (!missing(variables_with_exact_matching)) {
+    exact_strata_col <- "exact_strata"
+    
+    hash_table_exact <- unique(data.table::rbindlist(list(unique(exposed[, ..variables_with_exact_matching]),
+                                                                                            unique(candidate_matches[, ..variables_with_exact_matching]))))
+    hash_table_exact[, exact_strata := 1:.N]
+    qs::qsave(hash_table_exact,
+              file.path(temporary_folder, "HT_exact"), nthreads = data.table_threads)
+    exposed <- exposed[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
+    candidate_matches <- candidate_matches[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
+    rm(hash_table_exact)
+  }
   
   # Define a lower and upper boundaries for variables with ranges
   # In exposed create variables for the boundaries
   # Define the set of rules to be used during matching
   list_simple_ranges_rules <- list()
+  lower_boundaries <- character()
+  upper_boundaries <- character()
+  
   if (!is.null(variables_with_range_matching)) {
     # TODO check names usage here
     lower_boundaries <- unlist(range_of_variables_with_range_matching)[c(TRUE, FALSE)]
@@ -105,27 +111,20 @@ GenerateMatchedDataset <- function(exposed,
     exposed[, (names(upper_boundaries)) := Map(`+`, .SD, upper_boundaries - lower_boundaries),
             .SDcols = names(lower_boundaries)]
     
-  } else {
-    lower_boundaries <- character(0)
-    upper_boundaries <- character(0)
   }
   
   # Define the set of rules to be used during matching for variables with predefined intervals
-  list_time_ranges_rules <- list()
-  list_time_ranges_rules <- append(list_time_ranges_rules,
-                                   list(paste0(time_variable_in_exposed, " <= ", time_variables_in_candidate_matches[[2]]),
-                                        paste0(time_variable_in_exposed, " >= ", time_variables_in_candidate_matches[[1]])))
+  list_time_ranges_rules <- list(paste0(time_variable_in_exposed, " <= ", time_variables_in_candidate_matches[[2]]),
+                                 paste0(time_variable_in_exposed, " >= ", time_variables_in_candidate_matches[[1]]))
   
   # Define join rules and column to be retained after the join
   strata_after_join <- c(unit_of_observation, paste0("i.", unit_of_observation))
   join_rules <- c(exact_strata_col, unlist(data.table::transpose(list_simple_ranges_rules)),
                   unlist(data.table::transpose(list_time_ranges_rules)))
   cols_after_join <- c(strata_after_join, exact_strata_col,
-                       variables_with_range_matching, time_variable_in_exposed, time_variables_in_candidate_matches,
-                       paste0("x.", time_variable_in_exposed))
-  if (!is.null(variables_with_range_matching)) {
-    cols_after_join <- c(cols_after_join, paste0("x.", names(lower_boundaries)))
-  }
+                       variables_with_range_matching, time_variable_in_exposed, time_variables_in_candidate_matches)
+  if (!is.null(time_variable_in_exposed)) cols_after_join <- c(cols_after_join, paste0("x.", time_variable_in_exposed))
+  if (!is.null(variables_with_range_matching)) cols_after_join <- c(cols_after_join, paste0("x.", names(lower_boundaries)))
   
   # Calculate the theoretical number of combination of each exact strata
   exposed_tr <- exposed[, .N, by = c("exact_strata", names(lower_boundaries), names(upper_boundaries))]
@@ -275,7 +274,9 @@ GenerateMatchedDataset <- function(exposed,
       # Save the dataset
       file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", batch_n))
       qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
+      rm(bootstrap_sample)
     }
+    rm(matched_df)
   }
   
   # Clean each dataset and combine them to from the complete bootstrap samples
