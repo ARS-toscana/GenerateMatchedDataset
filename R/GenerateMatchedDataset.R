@@ -241,7 +241,7 @@ GenerateMatchedDataset <- function(exposed,
     rm(candidate_filtered, exposed_filtered)
     
     # Convert names related to range variables to what we want in the end
-    # Lower bound variables are retransformed to inital ones
+    # Lower bound variables are transformed back to initial ones
     if (!is.null(variables_with_range_matching)) {
       data.table::setnames(matched_df, variables_with_range_matching, paste0("i.", variables_with_range_matching))
       data.table::setnames(matched_df, paste0("x.", names(lower_boundaries)), names(variables_with_range_matching))
