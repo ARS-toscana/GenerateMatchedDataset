@@ -38,7 +38,7 @@ GenerateMatchedDataset <- function(exposed,
                                    methodology_for_bootstrapping = NULL,
                                    number_of_bootstrapping_samples = 100,
                                    type_of_sampling = NULL,
-                                   exclude_sameUoO = NULL,
+                                   exclude_sameUoO = TRUE,
                                    algorithm_for_matching = NULL,
                                    threshold = NULL,
                                    technical_details_of_matching = NULL,
@@ -245,6 +245,19 @@ GenerateMatchedDataset <- function(exposed,
     # Matching
     matched_df <- exposed_filtered[candidate_filtered, ..cols_after_join, on = join_rules, nomatch = NULL]
     rm(candidate_filtered, exposed_filtered)
+    
+    # Remove same UoO if necessary
+    if (exclude_sameUoO) {
+      
+      AndDiff = function(cond){
+        Reduce(
+          function(x, y) call("&", x, y),
+          lapply(cond, function(var) call("!=", var, paste0("i.", var)))
+        )
+      }
+      filter_cond <- AndDiff(unit_of_observation)
+      matched_df <- matched_df[eval(filter_cond)]
+    }
     
     # Convert names related to range variables to what we want in the end
     # Lower bound variables are transformed back to initial ones
