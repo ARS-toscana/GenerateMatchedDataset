@@ -6,8 +6,8 @@ unlink("Example 3/g_intermediate", recursive = T)
 unlink("Example 3/g_output", recursive = T)
 dir.create("Example 3/g_intermediate")
 dir.create("Example 3/g_output")
-exposed <- data.table::fread("test_with_simulated_data/exposed_1e+05.csv")
-candidate_matches = data.table::fread("test_with_simulated_data/candidate_matches_1e+05.csv")
+exposed <- data.table::fread("test_with_simulated_data/exposed_1000.csv")
+candidate_matches = data.table::fread("test_with_simulated_data/candidate_matches_1000.csv")
 
 bench::mark({
   GenerateMatchedDataset(exposed = data.table::copy(exposed),
@@ -20,7 +20,7 @@ bench::mark({
                          range_of_variables_with_range_matching = list(c(-1, 1)),
                          sample_size_per_exposed = 1,
                          number_of_bootstrapping_samples = 10,
-                         threshold = 2000000,
+                         threshold = 8000,
                          temporary_folder = c("Example 3/g_intermediate"),
                          output_matching = c("Example 3/g_output"))
 }, {
