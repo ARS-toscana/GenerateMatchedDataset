@@ -10,7 +10,7 @@
 #' @param additional_matching_rules Additional rule to be used during matches
 #' @param rule_for_matching_on_dates "exact"
 #' @param output_matching Output folder and names. After we will append bootstrap number.
-#' seeds_for_sampling
+#' @param seeds_for_sampling
 #' @param temporary_folder Folder where to store intermediate dataset. Default is NULL, if TRUE then the default folder is tempdir() otherwise it is possible to pass a custom path. If TRUE or custom path the function enter RAM saving mode.
 #' @param sample_size_per_exposed Number of controls to be matched for each exposed. Default is 1
 #' @param methodology_for_bootstrapping The default for this argument is NULL so no bootstrapping. Other options are "Sample exposed" and "Sample units of observations".
@@ -216,15 +216,15 @@ GenerateMatchedDataset <- function(exposed,
   # Generate samples of UoO and save them
   # TODO change here for sampling
   # TODO set seed for bootstrap sampling
-  set.seed(123)
-  seeds <- replicate(number_of_bootstrapping_samples, {
-    sample(1:100, 1)
-  }, simplify = T)
+  set.seed(seeds_for_sampling)
+  # seeds <- replicate(number_of_bootstrapping_samples, {
+  #   sample(1:100, 1)
+  # }, simplify = T)
   # TODO remove for release?
   data.table::setorderv(distinct_UoO, unit_of_observation)
   pop_size <- nrow(distinct_UoO)
   for (i in 1:number_of_bootstrapping_samples) {
-    set.seed(seeds[[i]])
+    # set.seed(seeds[[i]])
     file_name <- file.path(temporary_folder, paste0("bootstrap_UoO_", i))
     qs::qsave(data.table::setkeyv(distinct_UoO[sample(.N, pop_size, replace = T)], unit_of_observation),
               file_name, nthreads = data.table_threads)
@@ -273,7 +273,7 @@ GenerateMatchedDataset <- function(exposed,
       data.table::setnames(matched_df, paste0("x.", time_variable_in_exposed), time_variable_in_exposed)
     }
     
-    set.seed(123)
+    set.seed(seeds_for_sampling)
     
     # Create the bootstrap sample and then extract a number of controls for each exposed
     # Save the dataset
