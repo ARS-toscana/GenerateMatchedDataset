@@ -1,13 +1,26 @@
+# TODO Comment on what file do
+# TODO add us 4 and programming taskforce
+
+# Clean environment and load functions
 rm(list=ls(all.names=TRUE))
 source(file.path("R", "GenerateMatchedDataset.R"))
 source(file.path("R", "GenerateMatchedDatasetNaive.R"))
 source(file.path("R", "GenerateMatchedDatasetHT.R"))
-unlink("Example 3/g_intermediate", recursive = T)
-unlink("Example 3/g_output", recursive = T)
-dir.create("Example 3/g_intermediate")
-dir.create("Example 3/g_output")
+
+# TODO parametrize folder
+# Delete old results
+unlink("Experiment/g_intermediate", recursive = T)
+unlink("Experiment/g_output", recursive = T)
+
+# Delete old results
+dir.create("Experiment/g_intermediate")
+dir.create("Experiment/g_output")
+
+# Load simulated datasets
 exposed <- data.table::fread("test_with_simulated_data/exposed_1000.csv")
 candidate_matches = data.table::fread("test_with_simulated_data/candidate_matches_1000.csv")
+
+# 
 
 bench::mark({
   GenerateMatchedDataset(exposed = data.table::copy(exposed),
