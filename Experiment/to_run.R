@@ -7,22 +7,15 @@ source(file.path("R", "GenerateMatchedDataset.R"))
 source(file.path("R", "GenerateMatchedDatasetNaive.R"))
 source(file.path("R", "GenerateMatchedDatasetHT.R"))
 
-# Set folder
+# Set folders
 folder <- "Experiment"
+g_folders <- c("g_results", "g_intermediate", "g_output", "g_datasets", "g_parameters")
 
 # Delete old results
-unlink(file.path(folder, "g_intermediate"), recursive = T)
-unlink(file.path(folder, "g_output"), recursive = T)
-unlink(file.path(folder, "g_results"), recursive = T)
-unlink(file.path(folder, "g_datasets"), recursive = T)
-unlink(file.path(folder, "g_parameters"), recursive = T)
+invisible(lapply(g_folders[-1], function(x) unlink(file.path(folder, x), recursive = T)))
 
 # Create again folders
-dir.create(file.path(folder, "g_intermediate"))
-dir.create(file.path(folder, "g_output"))
-dir.create(file.path(folder, "g_results"))
-dir.create(file.path(folder, "g_datasets"))
-dir.create(file.path(folder, "g_parameters"))
+invisible(lapply(g_folders, function(x) dir.create(file.path(folder, x), showWarnings = F)))
 
 # Set the experiment parameters
 source(file.path(folder, "p_parameters", "1_general_parameters.R"))
