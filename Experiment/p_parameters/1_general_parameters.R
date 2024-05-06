@@ -5,4 +5,4 @@ if(length(new.packages)) install.packages(new.packages)
 invisible(lapply(list.of.packages, require, character.only = T))
 
 # Clean environment
-rm(new.packages, list.of.packages, set_and_create_dir)
+rm(new.packages, list.of.packages)
