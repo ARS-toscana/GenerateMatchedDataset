@@ -16,6 +16,7 @@ invisible(lapply(g_folders[-1], function(x) unlink(file.path(folder, x), recursi
 
 # Create again folders
 invisible(lapply(g_folders, function(x) dir.create(file.path(folder, x), showWarnings = F)))
+rm(g_folders)
 
 # set directory_names
 dirdatasets <- file.path(folder, "g_datasets")
