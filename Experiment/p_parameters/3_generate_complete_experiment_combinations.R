@@ -30,4 +30,7 @@ tech_restriction <- data.table::data.table(cores = c(T, 1),
 combination_experiment <- merge(combination_experiment[, placeholder := T], tech_restriction[, placeholder := T],
                                 by = "placeholder", allow.cartesian = T)[, placeholder := NULL]
 
+combination_experiment[, complete_label := paste(label_exp, label_cm, algo_label, match_vars_label, boot_schema,
+                                                 samp_schema_label, cores_label, sep = "/")]
+
 rm(algo_df, match_vars_df, sampling_schemas, tech_restriction)
