@@ -38,3 +38,6 @@ for (i in 1:length(df_size_exposed)) {
     cm_factor_lab <- cm_factor_lab[-length(cm_factor_lab)]
   }
 }
+
+rm(df_size_exposed, cm_factor, cm_factor_lab, i)
+

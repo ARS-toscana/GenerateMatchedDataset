@@ -25,7 +25,9 @@ dir.create(file.path(folder, "g_datasets"))
 source(file.path(folder, "p_parameters", "1_general_parameters.R"))
 source(file.path(folder, "p_parameters", "2_parameters_datasets.R"))
 
-for (experiment in list_of_experiments){
+rm(folder)
+
+for (i in nrow(pairs_df)){
   # Load simulated datasets
   exposed <- data.table::fread("test_with_simulated_data/exposed_1000.csv")
   candidate_matches = data.table::fread("test_with_simulated_data/candidate_matches_1000.csv")
