@@ -2,5 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
-Example 3/g_intermediate
-Example 3/g_output
+**/g_intermediate
+**/g_output
+**/g_results
+**/g_datasets
