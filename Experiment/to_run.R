@@ -24,6 +24,7 @@ dir.create(file.path(folder, "g_datasets"))
 # Set the experiment parameters
 source(file.path(folder, "p_parameters", "1_general_parameters.R"))
 source(file.path(folder, "p_parameters", "2_parameters_datasets.R"))
+source(file.path(folder, "p_parameters", "3_generate_complete_experiment_combinations.R"))
 
 # Generate datasets
 source(file.path(folder, "p_steps", "step_1_generate_datasets.R"))
