@@ -7,14 +7,19 @@ source(file.path("R", "GenerateMatchedDataset.R"))
 source(file.path("R", "GenerateMatchedDatasetNaive.R"))
 source(file.path("R", "GenerateMatchedDatasetHT.R"))
 
-# TODO parametrize folder
-# Delete old results
-unlink("Experiment/g_intermediate", recursive = T)
-unlink("Experiment/g_output", recursive = T)
+# Set folder
+folder <- "Experiment"
 
 # Delete old results
-dir.create("Experiment/g_intermediate")
-dir.create("Experiment/g_output")
+unlink(file.path(folder, "g_intermediate"), recursive = T)
+unlink(file.path(folder, "g_output"), recursive = T)
+unlink(file.path(folder, "g_results"), recursive = T)
+unlink(file.path(folder, "g_datasets"), recursive = T)
+# Create again folders
+dir.create(file.path(folder, "g_intermediate"))
+dir.create(file.path(folder, "g_output"))
+dir.create(file.path(folder, "g_results"))
+dir.create(file.path(folder, "g_datasets"))
 
 # Set the experiment parameters
 
