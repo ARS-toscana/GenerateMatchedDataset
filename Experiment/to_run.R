@@ -22,15 +22,8 @@ dir.create(file.path(folder, "g_results"))
 dir.create(file.path(folder, "g_datasets"))
 
 # Set the experiment parameters
-
-list_of_experiments <- c("threshold2_pop1000_cm0.1_matching2_tech0_samplingcomplete","threshold3_pop1000_cm0.1_matching2_tech0_samplingcomplete")
-
-threshold[["threshold2_pop1000_cm0.1_matching2_tech0_samplingcomplete"]] <- "max among frequency of bin capacity"
-pop[["threshold2_pop1000_cm0.1_matching2_tech0_samplingcomplete"]] <- 1000
-cm[["threshold2_pop1000_cm0.1_matching2_tech0_samplingcomplete"]] <- 0.1
-matching[["threshold2_pop1000_cm0.1_matching2_tech0_samplingcomplete"]] <- 2
-tech[["threshold2_pop1000_cm0.1_matching2_tech0_samplingcomplete"]] <- 0
-sampling[["threshold2_pop1000_cm0.1_matching2_tech0_samplingcomplete"]] <- "complete"
+source(file.path(folder, "p_parameters", "1_general_parameters.R"))
+source(file.path(folder, "p_parameters", "2_parameters_datasets.R"))
 
 for (experiment in list_of_experiments){
   # Load simulated datasets
