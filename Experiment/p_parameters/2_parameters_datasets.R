@@ -26,14 +26,15 @@ names(cm_factor) <- cm_factor_lab
 # all combinations
 
 # all df_size are paired with small cm_factors
-pairs_df <- data.table::data.table(label_exp = character(), label_cm = character(), exp = numeric(), cm = numeric())
+combination_experiment <- data.table::data.table(label_exp = character(), label_cm = character(),
+                                                 exp = numeric(), cm = numeric())
 
 for (i in 1:length(df_size_exposed)) {
-  pairs_df <- data.table::rbindlist(list(pairs_df,
-                                         data.table::data.table(label_exp = names(df_size_exposed)[[i]],
-                                                                label_cm = cm_factor_lab,
-                                                                exp = df_size_exposed[[i]],
-                                                                cm = cm_factor[cm_factor_lab])))
+  combination_experiment <- data.table::rbindlist(list(combination_experiment,
+                                                       data.table::data.table(label_exp = names(df_size_exposed)[[i]],
+                                                                              label_cm = cm_factor_lab,
+                                                                              exp = df_size_exposed[[i]],
+                                                                              cm = cm_factor[cm_factor_lab])))
   if (i %% 2 == 0) {
     cm_factor_lab <- cm_factor_lab[-length(cm_factor_lab)]
   }
