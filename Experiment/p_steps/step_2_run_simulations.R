@@ -1,16 +1,21 @@
-for (i in nrow(pairs_df)){
+original_data.table_threads <- data.table::getDTthreads()
+
+for (i in nrow(combination_experiment)){
+  
+  single_row <- combination_experiment[i, ]
   
   # Load simulated datasets
   exposed <- data.table::fread("test_with_simulated_data/exposed_1000.csv")
   candidate_matches = data.table::fread("test_with_simulated_data/candidate_matches_1000.csv")
   
-  single_row <- pairs_df[1, ]
-  single_row <- single_row[, complete_label := paste0(label_exp, label_cm)]
+  # TODO modify parameters for threshold_to_use, age, cat_var, samp_schema, boot_n, boot_schema
+  
+  if (cores == 1) data.table::setDTthreads(1) else data.table::setDTthreads(original_data.table_threads)
   
   # 
   bnch <- bench::mark(
     do.call(
-      what = "GenerateMatchedDataset",
+      what = single_row[, function_to_use],
       args = list(exposed = data.table::copy(exposed),
                   candidate_matches = data.table::copy(candidate_matches),
                   unit_of_observation = c("person_id"),
@@ -27,6 +32,8 @@ for (i in nrow(pairs_df)){
     ), min_iterations = 10)
   
   bnch <- bnch |> dplyr::bind_cols(single_row)
+  
+  
   
   saveRDS(bnch, file.path(folder, "g_results", paste0(single_row[, complete_label], ".rds")))
   
