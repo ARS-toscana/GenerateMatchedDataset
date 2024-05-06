@@ -17,6 +17,10 @@ invisible(lapply(g_folders[-1], function(x) unlink(file.path(folder, x), recursi
 # Create again folders
 invisible(lapply(g_folders, function(x) dir.create(file.path(folder, x), showWarnings = F)))
 
+# set directory_names
+
+dirdatasets <- file.path(folder, "g_datasets")
+
 # Set the experiment parameters
 source(file.path(folder, "p_parameters", "1_general_parameters.R"))
 source(file.path(folder, "p_parameters", "2_parameters_datasets.R"))
