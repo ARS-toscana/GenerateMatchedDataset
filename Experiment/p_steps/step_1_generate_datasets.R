@@ -69,7 +69,7 @@ for (ds in list_of_exp_datasets){
   cm_fac <- list()
   for (cm_fac_lab in list_of_cm_fac_labs){ 
   # Define occurrence of cases of unexposed, per ageband: the higher the number, the larger the amount of unexposed persons in the candidate_matches dataset for that ageband
-  cm_fac[[cm_fac_lab]] <- combination_experiment[label_exp == ds & label_cm == cm_fac_lab,.(cm)][[1]]
+  cm_fac[[cm_fac_lab]] <- unique(combination_experiment[label_exp == ds & label_cm == cm_fac_lab,.(cm)][[1]])
   cm <- cm_fac[[cm_fac_lab]]
   occurrence_unexposed[[cm_fac_lab]] <- c(cm, cm, cm, cm, cm, cm)
   
