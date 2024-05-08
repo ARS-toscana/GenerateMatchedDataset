@@ -31,9 +31,8 @@ for (i in nrow(combination_experiment)){
                   output_matching = c("Example 3/g_output"))
     ), min_iterations = 10)
   
+  # TODO add machine metadata and date (+seconds)
   bnch <- bnch |> dplyr::bind_cols(single_row)
-  
-  
   
   saveRDS(bnch, file.path(folder, "g_results", paste0(single_row[, complete_label], ".rds")))
   
