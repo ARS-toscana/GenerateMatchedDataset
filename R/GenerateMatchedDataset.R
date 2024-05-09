@@ -208,9 +208,15 @@ GenerateMatchedDataset <- function(exposed,
   }
   rm(complete_tr, cols_exp, cols_cand, cols_to_keep)
   
+  
   # Get unique UoO and then remove exposed and candidate_matches dataset since they are not used anymore
-  distinct_UoO <- unique(data.table::rbindlist(list(exposed[, ..unit_of_observation],
-                                                     candidate_matches[, ..unit_of_observation])))
+  if (methodology_for_bootstrapping == "SExp") {
+    distinct_UoO <- unique(exposed[, ..unit_of_observation])
+  } else if (methodology_for_bootstrapping == "SUoO") {
+    distinct_UoO <- unique(data.table::rbindlist(list(exposed[, ..unit_of_observation],
+                                                      candidate_matches[, ..unit_of_observation])))
+  }
+  
   rm(exposed, candidate_matches)
   
   # Generate samples of UoO and save them
@@ -285,11 +291,18 @@ GenerateMatchedDataset <- function(exposed,
       
       # Create bootstrap sample
       # TODO review here
-      bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
-                                     nomatch = NULL, allow.cartesian = T][bootstrap_sample,
-                                                                          on = paste(paste0("i.", unit_of_observation), "==",
-                                                                                     unit_of_observation, collapse = ", "),
-                                                                          nomatch = NULL, allow.cartesian = T]
+      if (methodology_for_bootstrapping == "SExp") {
+        bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
+                                       nomatch = NULL, allow.cartesian = T]
+      } else if (methodology_for_bootstrapping == "SUoO") {
+        bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
+                                       nomatch = NULL, allow.cartesian = T][bootstrap_sample,
+                                                                            on = paste(paste0("i.", unit_of_observation), "==",
+                                                                                       unit_of_observation, collapse = ", "),
+                                                                            nomatch = NULL, allow.cartesian = T]
+      }
+      
+      
       
       # Extract a number of controls for each exposed
       if (sample_size_per_exposed != "N") {

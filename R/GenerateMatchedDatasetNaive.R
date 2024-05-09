@@ -138,10 +138,16 @@ GenerateMatchedDatasetNaive <- function(exposed,
     
     # Create bootstrap sample
     # TODO review here
-    bootstrap_sample <- matched_df[bootstrap_sample, on = "person_id",
-                                   nomatch = NULL, allow.cartesian = T][bootstrap_sample,
-                                                                        on = c(i.person_id = "person_id"),
-                                                                        nomatch = NULL, allow.cartesian = T]
+    if (methodology_for_bootstrapping == "SExp") {
+      bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
+                                     nomatch = NULL, allow.cartesian = T]
+    } else if (methodology_for_bootstrapping == "SUoO") {
+      bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
+                                     nomatch = NULL, allow.cartesian = T][bootstrap_sample,
+                                                                          on = paste(paste0("i.", unit_of_observation), "==",
+                                                                                     unit_of_observation, collapse = ", "),
+                                                                          nomatch = NULL, allow.cartesian = T]
+    }
     
     # Extract a number of controls for each exposed
     if (sample_size_per_exposed != "N") {
