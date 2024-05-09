@@ -144,8 +144,10 @@ GenerateMatchedDatasetNaive <- function(exposed,
                                                                         nomatch = NULL, allow.cartesian = T]
     
     # Extract a number of controls for each exposed
-    # TODO change here for sampling
-    bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))], by = "person_id"][[2]]]
+    if (sample_size_per_exposed != "N") {
+      bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
+                                                            by = unit_of_observation][[2]]]
+    }
     
     # Helps in defining the column order
     common_cols <- intersect(excl_cols_exp, excl_cols_cand)

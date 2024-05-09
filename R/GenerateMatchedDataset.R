@@ -292,9 +292,10 @@ GenerateMatchedDataset <- function(exposed,
                                                                           nomatch = NULL, allow.cartesian = T]
       
       # Extract a number of controls for each exposed
-      # TODO change here for sampling
-      bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
-                                                            by = unit_of_observation][[2]]]
+      if (sample_size_per_exposed != "N") {
+        bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
+                                                              by = unit_of_observation][[2]]]
+      }
       
       # Save the dataset
       file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", batch_n))
