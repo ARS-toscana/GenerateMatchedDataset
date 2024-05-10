@@ -82,30 +82,35 @@ GenerateMatchedDatasetNaive <- function(exposed,
     cols_after_join <- c(cols_after_join, paste0("x.", names(lower_boundaries)))
   }
   
-  # Get unique UoO
-  distinct_UoO <- unique(data.table::rbindlist(list(exposed[, ..unit_of_observation],
-                                                    candidate_matches[, ..unit_of_observation])))
-  # TODO clean later on
-  exposed_filtered <- exposed
-  candidate_filtered <- candidate_matches
-  
-  # Generate samples of UoO and save them
-  # TODO change here for sampling
-  # TODO set seed for bootstrap sampling
-  set.seed(123)
-  seeds <- replicate(number_of_bootstrapping_samples, {
-    sample(1:100, 1)
-  }, simplify = T)
-  # TODO remove for release?
-  data.table::setorderv(distinct_UoO, unit_of_observation)
-  pop_size <- nrow(distinct_UoO)
-  for (i in 1:number_of_bootstrapping_samples) {
-    set.seed(seeds[[i]])
-    file_name <- file.path(temporary_folder, paste0("bootstrap_UoO_naive_", i))
-    qs::qsave(data.table::setkeyv(distinct_UoO[sample(.N, pop_size, replace = T)], unit_of_observation),
-              file_name, nthreads = data.table_threads)
+  if (!is.null(number_of_bootstrapping_samples)) {
+    
+    # Get unique UoO and then remove exposed and candidate_matches dataset since they are not used anymore
+    if (methodology_for_bootstrapping == "SExp") {
+      distinct_UoO <- unique(exposed[, ..unit_of_observation])
+    } else if (methodology_for_bootstrapping == "SUoO") {
+      distinct_UoO <- unique(data.table::rbindlist(list(exposed[, ..unit_of_observation],
+                                                        candidate_matches[, ..unit_of_observation])))
+    }
+    
+    # Generate samples of UoO and save them
+    # TODO change here for sampling
+    # TODO set seed for bootstrap sampling
+    set.seed(seeds_for_sampling)
+    # seeds <- replicate(number_of_bootstrapping_samples, {
+    #   sample(1:100, 1)
+    # }, simplify = T)
+    # TODO remove for release?
+    data.table::setorderv(distinct_UoO, unit_of_observation)
+    pop_size <- nrow(distinct_UoO)
+    for (i in 1:number_of_bootstrapping_samples) {
+      # set.seed(seeds[[i]])
+      file_name <- file.path(temporary_folder, paste0("bootstrap_UoO_naive_", i))
+      qs::qsave(data.table::setkeyv(distinct_UoO[sample(.N, pop_size, replace = T)], unit_of_observation),
+                file_name, nthreads = data.table_threads)
+    }
+    rm(distinct_UoO)
   }
-  rm(distinct_UoO)
+  rm(exposed, candidate_matches)
   
   # IMPORTANT: necessary for the join in case 2+ variables with ranges
   data.table::setDT(exposed_filtered)
@@ -133,6 +138,44 @@ GenerateMatchedDatasetNaive <- function(exposed,
   # Create the bootstrap sample and then extract a number of controls for each exposed
   # Save the dataset
   data.table::setkeyv(matched_df, unit_of_observation)
+  if (T) {
+    bootstrap_sample <- data.table::copy(matched_df)
+    
+    # Extract a number of controls for each exposed
+    if (sample_size_per_exposed != "N") {
+      bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
+                                                            by = unit_of_observation][[2]]]
+    }
+    
+    # Helps in defining the column order
+    common_cols <- intersect(excl_cols_exp, excl_cols_cand)
+    if (length(common_cols) > 0) {
+      pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp), common_cols)
+      post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand), paste0("i.", common_cols))
+    } else {
+      pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp))
+      post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand))
+    }
+    
+    # Final column order
+    if (!is.null(variables_with_range_matching)) {
+      col_order_range_matching <- paste0("i.", variables_with_range_matching)
+    } else {
+      col_order_range_matching <- character(0)
+    }
+    col_order <- c(strata_after_join, time_variable_in_exposed, time_variables_in_candidate_matches,
+                   variables_with_range_matching, pre_cols, variables_with_exact_matching,
+                   col_order_range_matching, post_cols)
+    data.table::setcolorder(bootstrap_sample, col_order)
+    
+    # Final save of bootstrap sample
+    file_name <- file.path(output_matching, paste0("no_bootstrap"))
+    qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
+    rm(bootstrap_sample)
+  }
+  
+  # Create the bootstrap sample and then extract a number of controls for each exposed
+  # Save the dataset
   for (i in 1:number_of_bootstrapping_samples) {
     bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_naive_", i)), nthreads = data.table_threads)
     
