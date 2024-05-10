@@ -65,7 +65,7 @@ GenerateMatchedDataset <- function(exposed,
                                                            unit_of_observation, time_variables_in_candidate_matches,
                                                            time_variable_in_exposed))
   excl_cols_cand_real <- c(unit_of_observation, excl_cols_cand)
-
+  
   if (!identical(excl_cols_exp, character(0))) {
     qs::qsave(unique(exposed[, ..excl_cols_exp_real]),
               file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table_threads)
@@ -86,7 +86,7 @@ GenerateMatchedDataset <- function(exposed,
     exact_strata_col <- "exact_strata"
     
     hash_table_exact <- unique(data.table::rbindlist(list(unique(exposed[, ..variables_with_exact_matching]),
-                                                                                            unique(candidate_matches[, ..variables_with_exact_matching]))))
+                                                          unique(candidate_matches[, ..variables_with_exact_matching]))))
     hash_table_exact[, exact_strata := 1:.N]
     qs::qsave(hash_table_exact,
               file.path(temporary_folder, "HT_exact"), nthreads = data.table_threads)
@@ -194,7 +194,7 @@ GenerateMatchedDataset <- function(exposed,
   complete_tr <- complete_tr[, V2 := assign_groups(V2, threshold)]
   data.table::setnames(complete_tr, "V2", "batch_number")
   N_of_batches <- max(complete_tr[, batch_number])
-
+  
   complete_tr <- smaller_HT[complete_tr, on = intersect(colnames(smaller_HT), colnames(complete_tr))]
   rm(smaller_HT)
   
@@ -306,41 +306,41 @@ GenerateMatchedDataset <- function(exposed,
       qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
       rm(bootstrap_sample)
     }
-    rm(matched_df)
     
     # Create the bootstrap sample and then extract a number of controls for each exposed
     # Save the dataset
-    data.table::setkeyv(matched_df, unit_of_observation)
-    for (i in 1:number_of_bootstrapping_samples) {
-      bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_", i)), nthreads = data.table_threads)
-      
-      # Create bootstrap sample
-      # TODO review here
-      if (methodology_for_bootstrapping == "SExp") {
-        bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
-                                       nomatch = NULL, allow.cartesian = T]
-      } else if (methodology_for_bootstrapping == "SUoO") {
-        bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
-                                       nomatch = NULL, allow.cartesian = T][bootstrap_sample,
-                                                                            on = paste(paste0("i.", unit_of_observation), "==",
-                                                                                       unit_of_observation, collapse = ", "),
-                                                                            nomatch = NULL, allow.cartesian = T]
+    if (!is.null(number_of_bootstrapping_samples)) {
+      for (i in 1:number_of_bootstrapping_samples) {
+        bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_", i)), nthreads = data.table_threads)
+        
+        # Create bootstrap sample
+        # TODO review here
+        if (methodology_for_bootstrapping == "SExp") {
+          bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
+                                         nomatch = NULL, allow.cartesian = T]
+        } else if (methodology_for_bootstrapping == "SUoO") {
+          bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
+                                         nomatch = NULL, allow.cartesian = T][bootstrap_sample,
+                                                                              on = paste(paste0("i.", unit_of_observation), "==",
+                                                                                         unit_of_observation, collapse = ", "),
+                                                                              nomatch = NULL, allow.cartesian = T]
+        }
+        
+        
+        
+        # Extract a number of controls for each exposed
+        if (sample_size_per_exposed != "N") {
+          bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
+                                                                by = unit_of_observation][[2]]]
+        }
+        
+        # Save the dataset
+        file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", batch_n))
+        qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
+        rm(bootstrap_sample)
       }
-      
-      
-      
-      # Extract a number of controls for each exposed
-      if (sample_size_per_exposed != "N") {
-        bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
-                                                              by = unit_of_observation][[2]]]
-      }
-      
-      # Save the dataset
-      file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", batch_n))
-      qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
-      rm(bootstrap_sample)
+      rm(matched_df)
     }
-    rm(matched_df)
   }
   
   # Clean each dataset and combine them to from the complete bootstrap samples
@@ -348,7 +348,7 @@ GenerateMatchedDataset <- function(exposed,
     
     # Load and combine all batches of a single bootstrap sample
     tmp <- data.table::rbindlist(lapply(1:N_of_batches, function(x) {
-      file_name <- file.path(temporary_folder, paste0("no_bootstrap_batch_batch_", x))
+      file_name <- file.path(temporary_folder, paste0("no_bootstrap_batch_", x))
       qs::qread(file_name, nthreads = data.table::getDTthreads())
     }))
     
@@ -397,55 +397,57 @@ GenerateMatchedDataset <- function(exposed,
   }
   
   # Clean each dataset and combine them to from the complete bootstrap samples
-  for (i in 1:number_of_bootstrapping_samples) {
-    
-    # Load and combine all batches of a single bootstrap sample
-    tmp <- data.table::rbindlist(lapply(1:N_of_batches, function(x) {
-      file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", x))
-      qs::qread(file_name, nthreads = data.table::getDTthreads())
-    }))
-    
-    # Add again excluded columns and single exact variables
-    if (!is.null(variables_with_exact_matching)){
-      hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
-      tmp <- tmp[hash_table_exact, on = c(exact_strata_col), nomatch = NULL][, exact_strata := NULL]
+  if (!is.null(number_of_bootstrapping_samples)) {
+    for (i in 1:number_of_bootstrapping_samples) {
+      
+      # Load and combine all batches of a single bootstrap sample
+      tmp <- data.table::rbindlist(lapply(1:N_of_batches, function(x) {
+        file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", x))
+        qs::qread(file_name, nthreads = data.table::getDTthreads())
+      }))
+      
+      # Add again excluded columns and single exact variables
+      if (!is.null(variables_with_exact_matching)){
+        hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
+        tmp <- tmp[hash_table_exact, on = c(exact_strata_col), nomatch = NULL][, exact_strata := NULL]
+      }
+      rm(hash_table_exact)
+      
+      if (!identical(excl_cols_exp, character(0))) {
+        hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
+        tmp <- tmp[hash_table_excl_exp, on = unit_of_observation, nomatch = NULL]
+      }
+      
+      if (!identical(excl_cols_cand, character(0))) {
+        hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
+        tmp <- tmp[hash_table_excl_cand, on = paste(paste0("i.", unit_of_observation), "==", unit_of_observation,
+                                                    collapse = ", "), nomatch = NULL]
+      }
+      
+      # Helps in defining the column order
+      common_cols <- intersect(excl_cols_exp, excl_cols_cand)
+      if (length(common_cols) > 0) {
+        pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp), common_cols)
+        post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand), paste0("i.", common_cols))
+      } else {
+        pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp))
+        post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand))
+      }
+      
+      # Final column order
+      if (!is.null(variables_with_range_matching)) {
+        col_order_range_matching <- paste0("i.", variables_with_range_matching)
+      } else {
+        col_order_range_matching <- character(0)
+      }
+      col_order <- c(strata_after_join, time_variable_in_exposed, time_variables_in_candidate_matches,
+                     variables_with_range_matching, pre_cols, variables_with_exact_matching,
+                     col_order_range_matching, post_cols)
+      data.table::setcolorder(tmp, col_order)
+      
+      # Final save of bootstrap sample
+      file_name <- file.path(output_matching, paste0("bootstrap_", i))
+      qs::qsave(tmp, file_name, nthreads = data.table_threads)
     }
-    rm(hash_table_exact)
-    
-    if (!identical(excl_cols_exp, character(0))) {
-      hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
-      tmp <- tmp[hash_table_excl_exp, on = unit_of_observation, nomatch = NULL]
-    }
-    
-    if (!identical(excl_cols_cand, character(0))) {
-      hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
-      tmp <- tmp[hash_table_excl_cand, on = paste(paste0("i.", unit_of_observation), "==", unit_of_observation,
-                                                  collapse = ", "), nomatch = NULL]
-    }
-    
-    # Helps in defining the column order
-    common_cols <- intersect(excl_cols_exp, excl_cols_cand)
-    if (length(common_cols) > 0) {
-      pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp), common_cols)
-      post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand), paste0("i.", common_cols))
-    } else {
-      pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp))
-      post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand))
-    }
-    
-    # Final column order
-    if (!is.null(variables_with_range_matching)) {
-      col_order_range_matching <- paste0("i.", variables_with_range_matching)
-    } else {
-      col_order_range_matching <- character(0)
-    }
-    col_order <- c(strata_after_join, time_variable_in_exposed, time_variables_in_candidate_matches,
-                   variables_with_range_matching, pre_cols, variables_with_exact_matching,
-                   col_order_range_matching, post_cols)
-    data.table::setcolorder(tmp, col_order)
-    
-    # Final save of bootstrap sample
-    file_name <- file.path(output_matching, paste0("bootstrap_", i))
-    qs::qsave(tmp, file_name, nthreads = data.table_threads)
   }
 }

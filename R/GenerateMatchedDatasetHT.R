@@ -102,6 +102,9 @@ GenerateMatchedDatasetHT <- function(exposed,
     cols_after_join <- c(cols_after_join, paste0("x.", names(lower_boundaries)))
   }
   
+  exposed_filtered <- exposed
+  candidate_filtered <- candidate_matches
+  
   if (!is.null(number_of_bootstrapping_samples)) {
     
     # Get unique UoO and then remove exposed and candidate_matches dataset since they are not used anymore
@@ -204,61 +207,63 @@ GenerateMatchedDatasetHT <- function(exposed,
   
   # Create the bootstrap sample and then extract a number of controls for each exposed
   # Save the dataset
-  for (i in 1:number_of_bootstrapping_samples) {
-    bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_HT_", i)), nthreads = data.table_threads)
-    
-    # Create bootstrap sample
-    # TODO review here
-    if (methodology_for_bootstrapping == "SExp") {
-      bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
-                                     nomatch = NULL, allow.cartesian = T]
-    } else if (methodology_for_bootstrapping == "SUoO") {
-      bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
-                                     nomatch = NULL, allow.cartesian = T][bootstrap_sample,
-                                                                          on = paste(paste0("i.", unit_of_observation), "==",
-                                                                                     unit_of_observation, collapse = ", "),
-                                                                          nomatch = NULL, allow.cartesian = T]
+  if (!is.null(number_of_bootstrapping_samples)) {
+    for (i in 1:number_of_bootstrapping_samples) {
+      bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_HT_", i)), nthreads = data.table_threads)
+      
+      # Create bootstrap sample
+      # TODO review here
+      if (methodology_for_bootstrapping == "SExp") {
+        bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
+                                       nomatch = NULL, allow.cartesian = T]
+      } else if (methodology_for_bootstrapping == "SUoO") {
+        bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
+                                       nomatch = NULL, allow.cartesian = T][bootstrap_sample,
+                                                                            on = paste(paste0("i.", unit_of_observation), "==",
+                                                                                       unit_of_observation, collapse = ", "),
+                                                                            nomatch = NULL, allow.cartesian = T]
+      }
+      
+      # Extract a number of controls for each exposed
+      if (sample_size_per_exposed != "N") {
+        bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
+                                                              by = unit_of_observation][[2]]]
+      }
+      
+      # Add again excluded columns and single exact variables
+      hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact_HT"), nthreads = data.table::getDTthreads())
+      hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed_HT"), nthreads = data.table::getDTthreads())
+      hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates_HT"), nthreads = data.table::getDTthreads())
+      
+      bootstrap_sample <- bootstrap_sample[hash_table_exact, on = 
+                                             c("exact_strata"), nomatch = NULL][, exact_strata := NULL]
+      bootstrap_sample <- bootstrap_sample[hash_table_excl_exp, on = c("person_id"), nomatch = NULL]
+      bootstrap_sample <- bootstrap_sample[hash_table_excl_cand, on = c("i.person_id == person_id"), nomatch = NULL]
+      
+      # Helps in defining the column order
+      common_cols <- intersect(excl_cols_exp, excl_cols_cand)
+      if (length(common_cols) > 0) {
+        pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp), common_cols)
+        post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand), paste0("i.", common_cols))
+      } else {
+        pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp))
+        post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand))
+      }
+      
+      # Final column order
+      if (!is.null(variables_with_range_matching)) {
+        col_order_range_matching <- paste0("i.", variables_with_range_matching)
+      } else {
+        col_order_range_matching <- character(0)
+      }
+      col_order <- c(strata_after_join, time_variable_in_exposed, time_variables_in_candidate_matches,
+                     variables_with_range_matching, pre_cols, variables_with_exact_matching,
+                     col_order_range_matching, post_cols)
+      data.table::setcolorder(bootstrap_sample, col_order)
+      
+      # Final save of bootstrap sample
+      file_name <- file.path(output_matching, paste0("bootstrap_HT_", i))
+      qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
     }
-    
-    # Extract a number of controls for each exposed
-    if (sample_size_per_exposed != "N") {
-      bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
-                                                            by = unit_of_observation][[2]]]
-    }
-    
-    # Add again excluded columns and single exact variables
-    hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact_HT"), nthreads = data.table::getDTthreads())
-    hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed_HT"), nthreads = data.table::getDTthreads())
-    hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates_HT"), nthreads = data.table::getDTthreads())
-    
-    bootstrap_sample <- bootstrap_sample[hash_table_exact, on = 
-                                           c("exact_strata"), nomatch = NULL][, exact_strata := NULL]
-    bootstrap_sample <- bootstrap_sample[hash_table_excl_exp, on = c("person_id"), nomatch = NULL]
-    bootstrap_sample <- bootstrap_sample[hash_table_excl_cand, on = c("i.person_id == person_id"), nomatch = NULL]
-    
-    # Helps in defining the column order
-    common_cols <- intersect(excl_cols_exp, excl_cols_cand)
-    if (length(common_cols) > 0) {
-      pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp), common_cols)
-      post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand), paste0("i.", common_cols))
-    } else {
-      pre_cols <- c(setdiff(excl_cols_cand, excl_cols_exp))
-      post_cols <- c(setdiff(excl_cols_exp, excl_cols_cand))
-    }
-    
-    # Final column order
-    if (!is.null(variables_with_range_matching)) {
-      col_order_range_matching <- paste0("i.", variables_with_range_matching)
-    } else {
-      col_order_range_matching <- character(0)
-    }
-    col_order <- c(strata_after_join, time_variable_in_exposed, time_variables_in_candidate_matches,
-                   variables_with_range_matching, pre_cols, variables_with_exact_matching,
-                   col_order_range_matching, post_cols)
-    data.table::setcolorder(bootstrap_sample, col_order)
-    
-    # Final save of bootstrap sample
-    file_name <- file.path(output_matching, paste0("bootstrap_HT_", i))
-    qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
   }
 }
