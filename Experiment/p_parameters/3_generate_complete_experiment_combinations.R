@@ -18,7 +18,7 @@ combination_experiment <- merge(combination_experiment[, placeholder := T], matc
 
 sampling_schemas <- data.table::data.table(samp_schema = c(1, "N", 1, 1),
                                            boot_n = c(NA, NA, 10, 10),
-                                           boot_schema = c(NA, NA, "A", "B"),
+                                           boot_schema = c(NA, NA, "SExp", "SUoO"),
                                            samp_schema_label = c("S1", "SN", "S1B10A", "S1B10B"))
 
 combination_experiment <- merge(combination_experiment[, placeholder := T], sampling_schemas[, placeholder := T],
