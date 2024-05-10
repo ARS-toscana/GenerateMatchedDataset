@@ -1,6 +1,6 @@
 original_data.table_threads <- data.table::getDTthreads()
 
-for (i in nrow(combination_experiment)){
+for (i in 1:nrow(combination_experiment)){
   
   single_row <- combination_experiment[i, ]
   
@@ -22,7 +22,7 @@ for (i in nrow(combination_experiment)){
   
   number_of_bootstrapping_samples <- if (!is.na(single_row[, boot_n])) single_row[, boot_n] else NULL
   
-  sample_size_per_exposed <- if (single_row[, samp_schema] != "N") as.integer(single_row[, samp_schema])
+  sample_size_per_exposed <- if (single_row[, samp_schema] != "N") as.integer(single_row[, samp_schema]) else single_row[, samp_schema]
   
   methodology_for_bootstrapping <- if (!is.na(single_row[, boot_schema])) single_row[, boot_schema] else NULL
   
@@ -81,6 +81,9 @@ for (i in nrow(combination_experiment)){
     threshold <- as.integer(single_row[, threshold_to_use])
   }
   
+  dir.create(file.path(folder, "g_intermediate", single_row[, complete_label]))
+  dir.create(file.path(folder, "g_output", single_row[, complete_label]))
+  
   # 
   bnch <- bench::mark(
     do.call(
@@ -97,12 +100,18 @@ for (i in nrow(combination_experiment)){
                   number_of_bootstrapping_samples = number_of_bootstrapping_samples,
                   methodology_for_bootstrapping = methodology_for_bootstrapping,
                   threshold = 80000,
-                  temporary_folder = file.path("Example 3", "g_intermediate", single_row[, complete_label]),
-                  output_matching = file.path("Example 3", "g_output", single_row[, complete_label]))
+                  temporary_folder = file.path(folder, "g_intermediate", single_row[, complete_label]),
+                  output_matching = file.path(folder, "g_output", single_row[, complete_label]))
     ), min_iterations = 10)
   
   # TODO add machine metadata and date (+seconds)
-  bnch <- bnch |> dplyr::bind_cols(single_row)
+  bnch <- bnch |> dplyr::bind_cols(single_row) |>
+    dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_cpu())) |>
+    dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_ram())) |>
+    dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_r_version())) |>
+    dplyr::bind_cols(data.table::data.table(version_data.table = as.data.table(benchmarkme::get_sys_details()$installed_packages)[Package == "data.table"]$Version,
+                                            version_qs = as.data.table(benchmarkme::get_sys_details()$installed_packages)[Package == "qs"]$Version)) |>
+    dplyr::bind_cols(data.table::data.table(timestamp = Sys.time()))
   
   saveRDS(bnch, file.path(folder, "g_results", paste0(single_row[, complete_label], ".rds")))
   
