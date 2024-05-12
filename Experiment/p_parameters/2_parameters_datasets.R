@@ -11,7 +11,7 @@
 # label_cm    - label of cm_factor_ds
 
 # Restrict datasets creation in case bigger ones are not necessary (values ranges from 0 to 4)
-level_restriction <- 3
+level_restriction <- 7
 
 # list of all possible sizes of exposed
 df_size_exposed <- c(100L, 200L, 1000L, 2000L, 10000L, 20000L, 100000L, 200000L, 1000000L)
@@ -22,7 +22,10 @@ df_size_exposed_restricted <- df_size_exposed[1:(length(df_size_exposed) - data.
                                                                                              level_restriction == 1, 1,
                                                                                              level_restriction == 2, 3,
                                                                                              level_restriction == 3, 5,
-                                                                                             level_restriction == 4, 7))]
+                                                                                             level_restriction == 4, 7,
+                                                                                             level_restriction == 5, 9,
+                                                                                             level_restriction == 6, 9,
+                                                                                             level_restriction == 7, 9))]
 
 # list of all possible factors to create candidate matches
 cm_factor <- c(0.1, 2, 10, 100, 1000, 10000, 100000, 1000000)
