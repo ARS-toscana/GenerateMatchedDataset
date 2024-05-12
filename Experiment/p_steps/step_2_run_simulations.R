@@ -1,15 +1,22 @@
 original_data.table_threads <- data.table::getDTthreads()
 
+data.table::setorder(combination_experiment, cores_label, match_vars_label, samp_schema_label, algo_label, label_cm, label_exp)
+
 for (i in 1:nrow(combination_experiment)){
   
   single_row <- combination_experiment[i, ]
+  
+  print(paste0(round((i - 1)/nrow(combination_experiment) * 100), "% label: ", single_row[, complete_label]))
   
   # Load simulated datasets
   exposed <- data.table::fread(file.path(folder, "g_datasets", paste0("exposed_", single_row[, label_exp], ".csv")))
   candidate_matches = data.table::fread(file.path(folder, "g_datasets",
                                                   paste0("candidate_matches_", single_row[, label_exp],
                                                          "_", single_row[, label_cm], ".csv")))
-
+  
+  exposed_pre <- data.table::copy(exposed)
+  candidate_matches_pre <- data.table::copy(candidate_matches)
+  
   variables_with_exact_matching <- single_row[, cat_var]
   if (single_row[, age] == "exact") {
     variables_with_exact_matching <- c(variables_with_exact_matching, "age")
@@ -40,20 +47,20 @@ for (i in 1:nrow(combination_experiment)){
       names(lower_boundaries) <- paste0("lower_interval_", names(variables_with_range_matching))
       upper_boundaries <- unlist(range_of_variables_with_range_matching)[c(FALSE, TRUE)]
       names(upper_boundaries) <- paste0("upper_interval_", names(variables_with_range_matching))
-      data.table::setnames(exposed, variables_with_range_matching, names(lower_boundaries))
+      data.table::setnames(exposed_pre, variables_with_range_matching, names(lower_boundaries))
       
       list_simple_ranges_rules <- list(paste0(names(lower_boundaries), " <= ", variables_with_range_matching),
                                        paste0(names(upper_boundaries), " >= ", variables_with_range_matching))
       
-      exposed[, (names(lower_boundaries)) := Map(`+`, .SD, lower_boundaries), .SDcols = names(lower_boundaries)]
-      exposed[, (names(upper_boundaries)) := Map(`+`, .SD, upper_boundaries - lower_boundaries),
-              .SDcols = names(lower_boundaries)]
+      exposed_pre[, (names(lower_boundaries)) := Map(`+`, .SD, lower_boundaries), .SDcols = names(lower_boundaries)]
+      exposed_pre[, (names(upper_boundaries)) := Map(`+`, .SD, upper_boundaries - lower_boundaries),
+                  .SDcols = names(lower_boundaries)]
       
     }
     
-    exposed_tr <- exposed[, .N, by = c(variables_with_exact_matching, names(lower_boundaries), names(upper_boundaries))]
+    exposed_tr <- exposed_pre[, .N, by = c(variables_with_exact_matching, names(lower_boundaries), names(upper_boundaries))]
     exposed_tr[, N := as.numeric(N)]
-    candidate_tr <- candidate_matches[, .N, by = c(variables_with_exact_matching, variables_with_range_matching)]
+    candidate_tr <- candidate_matches_pre[, .N, by = c(variables_with_exact_matching, variables_with_range_matching)]
     exposed_tr[, N := as.numeric(N)]
     cols_to_include <- c(variables_with_exact_matching, variables_with_range_matching)
     if (!is.null(variables_with_range_matching)) {
@@ -99,19 +106,24 @@ for (i in 1:nrow(combination_experiment)){
                   sample_size_per_exposed = sample_size_per_exposed,
                   number_of_bootstrapping_samples = number_of_bootstrapping_samples,
                   methodology_for_bootstrapping = methodology_for_bootstrapping,
-                  threshold = 80000,
+                  threshold = threshold,
                   temporary_folder = file.path(folder, "g_intermediate", single_row[, complete_label]),
                   output_matching = file.path(folder, "g_output", single_row[, complete_label]))
     ), min_iterations = 10)
   
-  # TODO add machine metadata and date (+seconds)
+  # TODO add Secondary memory utilization
+  bnch <- data.table::as.data.table(bnch)
+  bnch[, threshold_used := threshold]
+  bnch[, timestamp := Sys.time()]
+  installed_pkgs <- data.table::as.data.table(benchmarkme::get_sys_details(ram = F)$installed_packages)
+  bnch[, version_data.table := installed_pkgs[Package == "data.table", ]$Version]
+  bnch[, version_qs := installed_pkgs[Package == "qs", ]$Version]
+  bnch[, OS_type := data.table::as.data.table(benchmarkme::get_sys_details(ram = F)$sys_info$sysname)]
   bnch <- bnch |> dplyr::bind_cols(single_row) |>
     dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_cpu())) |>
-    dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_ram())) |>
-    dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_r_version())) |>
-    dplyr::bind_cols(data.table::data.table(version_data.table = as.data.table(benchmarkme::get_sys_details()$installed_packages)[Package == "data.table"]$Version,
-                                            version_qs = as.data.table(benchmarkme::get_sys_details()$installed_packages)[Package == "qs"]$Version)) |>
-    dplyr::bind_cols(data.table::data.table(timestamp = Sys.time()))
+    dplyr::bind_cols(data.table::data.table(ram = benchmarkme:::clean_ram(suppressWarnings(try(
+      benchmarkme:::system_ram(R.version$os),silent = TRUE)), R.version$os))) |>
+    dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_r_version()))
   
   saveRDS(bnch, file.path(folder, "g_results", paste0(single_row[, complete_label], ".rds")))
   
