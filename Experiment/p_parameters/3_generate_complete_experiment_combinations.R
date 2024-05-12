@@ -1,6 +1,6 @@
 # Algorithm to use
-algo_df <- data.table::data.table(algo = c("Naive", "Hash", "Threshold 1", "Threshold max",
-                                           "Threshold half", "Threshold double"),
+algo_df <- data.table::data.table(algo = c("Naive", "Hash", "Threshold", "Threshold",
+                                           "Threshold", "Threshold"),
                                   algo_label = c("N", "H", "T1", "Tm", "Th", "Td"),
                                   function_to_use = c("GenerateMatchedDatasetNaive", "GenerateMatchedDatasetHT",
                                                       rep("GenerateMatchedDataset", 4)),
@@ -19,7 +19,7 @@ combination_experiment <- merge(combination_experiment[, placeholder := T], matc
 sampling_schemas <- data.table::data.table(samp_schema = c(1, "N", 1, 1),
                                            boot_n = c(NA, NA, 10, 10),
                                            boot_schema = c(NA, NA, "SExp", "SUoO"),
-                                           samp_schema_label = c("S1", "SN", "S1B10A", "S1B10B"))
+                                           samp_schema_label = c("S1", "SN", "S1B10SExp", "S1B10SUoO"))
 
 combination_experiment <- merge(combination_experiment[, placeholder := T], sampling_schemas[, placeholder := T],
                                 by = "placeholder", allow.cartesian = T)[, placeholder := NULL]
@@ -30,7 +30,7 @@ tech_restriction <- data.table::data.table(cores = c(T, 1),
 combination_experiment <- merge(combination_experiment[, placeholder := T], tech_restriction[, placeholder := T],
                                 by = "placeholder", allow.cartesian = T)[, placeholder := NULL]
 
-combination_experiment[, complete_label := paste(label_exp, label_cm, algo_label, match_vars_label, boot_schema,
+combination_experiment[, complete_label := paste(label_exp, label_cm, algo_label, match_vars_label,
                                                  samp_schema_label, cores_label, sep = "_")]
 
 rm(algo_df, match_vars_df, sampling_schemas, tech_restriction)
