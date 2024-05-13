@@ -181,11 +181,11 @@ for (ds in list_of_exp_datasets){
     filtered_candidate_matches$person_id_new <- (filtered_candidate_matches$person_id + df_size) * maxgroup
     
     # Create candidate_matches_add with a counter across copies
-    candidate_matches_add <- filtered_candidate_matches[rep(1:.N, additional_unexposed)][, counter := 1:.N, by = person_id]
+    candidate_matches_add <- filtered_candidate_matches[rep(1:.N, additional_unexposed)][, counter := rowid(person_id)]
     rm(filtered_candidate_matches)
     # modify person_id and verify it's a unique identifier
     
-    candidate_matches_add$person_id_new <- candidate_matches_add$person_id_new + candidate_matches_add$counter
+    candidate_matches_add[, person_id_new := person_id_new + counter]
     has_duplicates <- any(duplicated(candidate_matches_add$person_id_new))
     # Print the result
     if (has_duplicates) {
@@ -193,22 +193,24 @@ for (ds in list_of_exp_datasets){
     } else {
       print("person_id is a unique identifier.")
     }
-    candidate_matches_add$person_id <- candidate_matches_add$person_id_new
+    candidate_matches_add[, person_id := NULL]
+    setnames(candidate_matches_add, "person_id_new", "person_id")
     
     # remove vaccination date and move end to the end of study period
-    candidate_matches_add$time0 <- NA
-    candidate_matches_add$end <- 720
+    candidate_matches_add[, time0 := NA]
+    candidate_matches_add[, time0 := 720]
     #clean up
-    candidate_matches_add <- subset(candidate_matches_add, select = c(-counter,-person_id_new))
+    candidate_matches_add[, counter := NULL]
     
     
     # bind the two dataframes
     
-    candidate_matches <- rbind(candidate_matches,candidate_matches_add)
+    candidate_matches <- rbindlist(list(candidate_matches, candidate_matches_add), use.names = TRUE)
     rm(candidate_matches_add)
     candidate_matches <- subset(candidate_matches,select = -additional_unexposed)
     candidate_matches <-  subset(candidate_matches, select = c(-ageband,-Nageband))
-    write.csv(candidate_matches, paste0(dirdatasets,"/",name_dataset_candidate_matches[[cm_fac_lab]],".csv"), row.names = FALSE)
+    qs::qsave(candidate_matches, paste0(dirdatasets, "/", name_dataset_candidate_matches[[cm_fac_lab]], ".qs"), nthreads = original_data.table_threads)
+    # write.csv(candidate_matches, paste0(dirdatasets,"/",name_dataset_candidate_matches[[cm_fac_lab]],".csv"), row.names = FALSE)
   }
   
   #remove data
@@ -223,8 +225,8 @@ for (ds in list_of_exp_datasets){
   
   # save the datasets in csv format
   
-  
-  write.csv(exposed, paste0(dirdatasets,"/",name_dataset_exposed,".csv"), row.names = FALSE)
+  qs::qsave(exposed, paste0(dirdatasets, "/", name_dataset_exposed, ".qs"), nthreads = original_data.table_threads)
+  # write.csv(exposed, paste0(dirdatasets,"/",name_dataset_exposed,".csv"), row.names = FALSE)
  
   #####################################################
 }

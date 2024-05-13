@@ -1,18 +1,21 @@
-original_data.table_threads <- data.table::getDTthreads()
-
-data.table::setorder(combination_experiment, cores_label, match_vars_label, samp_schema_label, algo_label, label_cm, label_exp)
 
 for (i in 1:nrow(combination_experiment)){
+  
+  save(i, file = file.path(folder, "g_parameters", "i.RData"))
+  
+  rm(list=ls(all.names=TRUE))
+  folder <- "Experiment"
+  load(file.path(folder, "g_parameters", "i.RData"), envir = .GlobalEnv)
+  load(file.path(folder, "g_parameters", "parameters.RData"), envir = .GlobalEnv)
   
   single_row <- combination_experiment[i, ]
   
   print(paste0(round((i - 1)/nrow(combination_experiment) * 100), "% label: ", single_row[, complete_label]))
   
   # Load simulated datasets
-  exposed <- data.table::fread(file.path(folder, "g_datasets", paste0("exposed_", single_row[, label_exp], ".csv")))
-  candidate_matches = data.table::fread(file.path(folder, "g_datasets",
-                                                  paste0("candidate_matches_", single_row[, label_exp],
-                                                         "_", single_row[, label_cm], ".csv")))
+  exposed <- qs::qread(file.path(folder, "g_datasets", paste0("exposed_", single_row[, label_exp], ".qs")))
+  candidate_matches = qs::qread(file.path(folder, "g_datasets", paste0("candidate_matches_", single_row[, label_exp],
+                                                                       "_", single_row[, label_cm], ".qs")))
   
   exposed_pre <- data.table::copy(exposed)
   candidate_matches_pre <- data.table::copy(candidate_matches)
@@ -88,8 +91,8 @@ for (i in 1:nrow(combination_experiment)){
     threshold <- as.integer(single_row[, threshold_to_use])
   }
   
-  dir.create(file.path(folder, "g_intermediate", single_row[, complete_label]))
-  dir.create(file.path(folder, "g_output", single_row[, complete_label]))
+  dir.create(file.path(folder, "g_intermediate", single_row[, complete_label]), showWarnings = F)
+  dir.create(file.path(folder, "g_output", single_row[, complete_label]), showWarnings = F)
   
   # 
   bnch <- bench::mark(
@@ -109,7 +112,7 @@ for (i in 1:nrow(combination_experiment)){
                   threshold = threshold,
                   temporary_folder = file.path(folder, "g_intermediate", single_row[, complete_label]),
                   output_matching = file.path(folder, "g_output", single_row[, complete_label]))
-    ), min_iterations = 10)
+    ), iterations = 10)
   
   # TODO add Secondary memory utilization
   bnch <- data.table::as.data.table(bnch)
@@ -119,13 +122,17 @@ for (i in 1:nrow(combination_experiment)){
   bnch[, version_data.table := installed_pkgs[Package == "data.table", ]$Version]
   bnch[, version_qs := installed_pkgs[Package == "qs", ]$Version]
   bnch[, OS_type := data.table::as.data.table(benchmarkme::get_sys_details(ram = F)$sys_info$sysname)]
+  bnch[, size_intermediate := sum(file.info(list.files(file.path(folder, "g_intermediate", combination_experiment[1, complete_label]), all.files = TRUE, recursive = TRUE, full.names = TRUE))$size)]
+  bnch[, size_output := sum(file.info(list.files(file.path(folder, "g_output", combination_experiment[1, complete_label]), all.files = TRUE, recursive = TRUE, full.names = TRUE))$size)]
+  
+  
   bnch <- bnch |> dplyr::bind_cols(single_row) |>
     dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_cpu())) |>
     dplyr::bind_cols(data.table::data.table(ram = benchmarkme:::clean_ram(suppressWarnings(try(
       benchmarkme:::system_ram(R.version$os),silent = TRUE)), R.version$os))) |>
     dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_r_version()))
   
-  saveRDS(bnch, file.path(folder, "g_results", paste0(single_row[, complete_label], ".rds")))
+  # saveRDS(bnch, file.path(folder, "g_results", paste0(single_row[, complete_label], ".rds")))
   
   rm(bnch, single_row)
 }
