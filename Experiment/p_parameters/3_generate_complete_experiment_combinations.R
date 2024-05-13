@@ -34,3 +34,8 @@ combination_experiment[, complete_label := paste(label_exp, label_cm, algo_label
                                                  samp_schema_label, cores_label, sep = "_")]
 
 rm(algo_df, match_vars_df, sampling_schemas, tech_restriction)
+
+original_data.table_threads <- data.table::getDTthreads()
+
+data.table::setorder(combination_experiment, cores_label, match_vars_label, samp_schema_label, algo_label, label_cm, label_exp)
+
