@@ -122,8 +122,8 @@ for (i in 1:nrow(combination_experiment)){
   bnch[, version_data.table := installed_pkgs[Package == "data.table", ]$Version]
   bnch[, version_qs := installed_pkgs[Package == "qs", ]$Version]
   bnch[, OS_type := data.table::as.data.table(benchmarkme::get_sys_details(ram = F)$sys_info$sysname)]
-  bnch[, size_intermediate := sum(file.info(list.files(file.path(folder, "g_intermediate", combination_experiment[1, complete_label]), all.files = TRUE, recursive = TRUE, full.names = TRUE))$size)]
-  bnch[, size_output := sum(file.info(list.files(file.path(folder, "g_output", combination_experiment[1, complete_label]), all.files = TRUE, recursive = TRUE, full.names = TRUE))$size)]
+  bnch[, size_intermediate := sum(file.info(list.files(file.path(folder, "g_intermediate", combination_experiment[i, complete_label]), all.files = TRUE, recursive = TRUE, full.names = TRUE))$size)]
+  bnch[, size_output := sum(file.info(list.files(file.path(folder, "g_output", combination_experiment[i, complete_label]), all.files = TRUE, recursive = TRUE, full.names = TRUE))$size)]
   
   
   bnch <- bnch |> dplyr::bind_cols(single_row) |>
@@ -132,7 +132,7 @@ for (i in 1:nrow(combination_experiment)){
       benchmarkme:::system_ram(R.version$os),silent = TRUE)), R.version$os))) |>
     dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_r_version()))
   
-  # saveRDS(bnch, file.path(folder, "g_results", paste0(single_row[, complete_label], ".rds")))
+  saveRDS(bnch, file.path(folder, "g_results", paste0(single_row[, complete_label], ".rds")))
   
   rm(bnch, single_row)
 }
