@@ -190,7 +190,7 @@ GenerateMatchedDataset <- function(exposed,
   }
   
   # Apply the function to create the variable 'batch_number' based on threshold
-  data.table::setorderv(complete_tr, c(exact_strata_col, names(lower_boundaries), "V2"))
+  data.table::setorderv(complete_tr, "V2")
   complete_tr <- complete_tr[, V2 := assign_groups(V2, threshold)]
   data.table::setnames(complete_tr, "V2", "batch_number")
   N_of_batches <- max(complete_tr[, batch_number])
