@@ -112,7 +112,7 @@ for (i in 1:nrow(combination_experiment)){
                   threshold = threshold,
                   temporary_folder = file.path(folder, "g_intermediate", single_row[, complete_label]),
                   output_matching = file.path(folder, "g_output", single_row[, complete_label]))
-    ), iterations = 10)
+    ), iterations = 10, filter_gc = F)
   
   # TODO add Secondary memory utilization
   bnch <- data.table::as.data.table(bnch)
