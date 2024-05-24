@@ -11,28 +11,19 @@
 # label_cm    - label of cm_factor_ds
 
 # Restrict datasets creation in case bigger ones are not necessary (values ranges from 0 to 4)
-level_restriction <- 7
+level_restriction <- c(2, 3, 4)
 
 # list of all possible sizes of exposed
 df_size_exposed <- c(100L, 200L, 1000L, 2000L, 10000L, 20000L, 100000L, 200000L, 1000000L)
 df_size_exposed_lab <- c("1h", "2h", "1k", "2k", "10k", "20k", "100k", "200k", "1M")
 names(df_size_exposed) <- df_size_exposed_lab
 rm(df_size_exposed_lab)
-df_size_exposed_restricted <- df_size_exposed[1:(length(df_size_exposed) - data.table::fcase(level_restriction == 0, 0,
-                                                                                             level_restriction == 1, 1,
-                                                                                             level_restriction == 2, 3,
-                                                                                             level_restriction == 3, 5,
-                                                                                             level_restriction == 4, 7,
-                                                                                             level_restriction == 5, 9,
-                                                                                             level_restriction == 6, 9,
-                                                                                             level_restriction == 7, 9))]
 
 # list of all possible factors to create candidate matches
 cm_factor <- c(0.1, 2, 10, 100, 1000, 10000, 100000, 1000000)
 cm_factor <- as.numeric(format(cm_factor, scientific = FALSE))
 cm_factor_lab <- c("1dt","2t","10t","100t","1kt","10kt","100kt","1Mt")
 names(cm_factor) <- cm_factor_lab
-cm_factor_restricted <- cm_factor[1:(length(cm_factor) - level_restriction)]
 
 #-------------------------------------
 # all combinations
@@ -52,6 +43,8 @@ for (i in 1:length(df_size_exposed)) {
   }
 }
 
-combination_experiment <- combination_experiment[label_exp %in% names(df_size_exposed_restricted) & label_cm %in% names(cm_factor_restricted), ]
+combination_experiment[, magnitude := floor(log10(exp * (1 + cm)))]
+combination_experiment <- combination_experiment[magnitude %in% level_restriction]
+combination_experiment[, magnitude := NULL]
 
-rm(df_size_exposed, cm_factor, cm_factor_lab, i, level_restriction, df_size_exposed_restricted, cm_factor_restricted)
+rm(df_size_exposed, cm_factor, cm_factor_lab, i, level_restriction)
