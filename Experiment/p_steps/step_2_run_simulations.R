@@ -132,7 +132,7 @@ for (i in 1:nrow(combination_experiment)){
       benchmarkme:::system_ram(R.version$os),silent = TRUE)), R.version$os))) |>
     dplyr::bind_cols(data.table::as.data.table(benchmarkme::get_r_version()))
   
-  saveRDS(bnch, file.path(folder, "g_results", paste0(single_row[, complete_label], ".rds")))
+  saveRDS(bnch, file.path(folder, "g_output", paste0(single_row[, complete_label], ".rds")))
   
   rm(bnch, single_row)
 }
