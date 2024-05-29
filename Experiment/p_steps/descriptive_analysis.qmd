@@ -1,0 +1,260 @@
+---
+title: "Descriptive analysis MatchBoots"
+format: docx
+editor: visual
+---
+
+## Table 1 parameters
+
+```{r}
+#| echo: false
+parent_wd <- dirname(getwd())
+load(file.path(parent_wd, "g_parameters", "parameters.RData"))
+
+bnch <- data.table::rbindlist(lapply(intersect(list.files(file.path(parent_wd, "g_results", "Laptop 1")),
+                                               paste0(combination_experiment[, complete_label], ".rds")), function(x) {
+  bnch <- readRDS(file.path(parent_wd, "g_results", "Laptop 1", x))
+  return(bnch[, .(complete_label, algo, time = bnch[, time][[1]], mem_alloc, size_intermediate, size_output, n_itr,
+                  exp, cm, threshold_to_use, threshold_used, match_vars_label, samp_schema_label, cores_label,
+                  model_name, no_of_cores, ram, OS_type, major, minor, version_data.table, version_qs, type_exp)])
+}))
+
+bnch <- qs::qread(file.path(parent_wd, "g_results", "Laptop 1", paste0("combined_benchmarks", ".qs")))
+
+bnch$cm <- factor(bnch$cm, levels = c("0.1", "2", "10"))
+bnch$mem_alloc <- bnch$mem_alloc / 1024 ^ 2
+bnch$exp <- as.factor(bnch$exp)
+bnch$threshold_to_use <- factor(bnch$threshold_to_use)
+bnch[, secondary_memory_usage := (size_intermediate + size_output) / 1024]
+
+bnch[, match_vars_label := data.table::fcase(match_vars_label == "Mat1", "Age exact + Uniform",
+                                             match_vars_label == "Mat2", "Age +=1 + Uniform",
+                                             match_vars_label == "Mat3", "Age exact + Normal")]
+bnch[, match_vars_label := factor(match_vars_label, levels = c("Age exact + Uniform", "Age +=1 + Uniform",
+                                                               "Age exact + Normal"))]
+
+bnch[, samp_schema_label := data.table::fcase(samp_schema_label == "S1", "Sample 1 cm to each exposed",
+                                              samp_schema_label == "SN", "Take all cm to each exposed",
+                                              samp_schema_label == "S1B10SExp", "Sample 1 cm to each exposed and take 10 bootstrap sampling from the exposed",
+                                              samp_schema_label == "S1B10SUoO", "Sample 1 cm to each exposed and take 10 bootstrap sampling from all UoO")]
+bnch[, samp_schema_label := factor(samp_schema_label,
+                                   levels = c("Sample 1 cm to each exposed", "Take all cm to each exposed",
+                                              "Sample 1 cm to each exposed and take 10 bootstrap sampling from the exposed",
+                                              "Sample 1 cm to each exposed and take 10 bootstrap sampling from all UoO"))]
+
+bnch[, cores_label := data.table::fcase(cores_label == "C1", "Use 1 thread",
+                                        cores_label == "Cdef", "Use half the threads present in the CPU")]
+
+bnch[, threshold_to_use := factor(threshold_to_use, levels = c(NA, 1, "half", "max", "double"))]
+
+library(gtsummary)
+library(htmlwidgets)
+library(ggplot2)
+```
+
+```{r}
+#| echo: false
+bnch %>% tbl_summary(by = exp,
+                     include = c(algo, cm, threshold_to_use, match_vars_label,
+                                 samp_schema_label, cores_label),
+                     label = list(
+                       algo ~ "Algorithm",
+                       cm ~ "Additional candidate matches proportion",
+                       threshold_to_use ~ "Threshold to use",
+                       match_vars_label ~ "Matching rules and Variable distributions",
+                       samp_schema_label ~ "Sampling of candidate matches and bootstrap schema",
+                       cores_label ~ "Number of cores used")
+                     ) %>%
+  as_gt()
+```
+
+## Table 1 metrics
+
+```{r}
+#| echo: false
+bnch %>% mutate(time1 = time, mem_alloc1 = mem_alloc, secondary_memory_usage1 = secondary_memory_usage,
+                time2 = time, mem_alloc2 = mem_alloc, secondary_memory_usage2 = secondary_memory_usage) %>% 
+  tbl_summary(by = exp,
+                     include = c(time, time1, time2, mem_alloc, mem_alloc1, mem_alloc2, secondary_memory_usage,
+                                 secondary_memory_usage1, secondary_memory_usage2),
+                     statistic = list(
+                       time ~ "Min: {min}, Max: {max}",
+                       time1 ~ "5%: {p5}, 25%: {p25}, Median: {median}, 75%: {p75}, 95%: {p95}",
+                       time2 ~ "Mean: {mean}, SD: {sd}",
+                       mem_alloc ~ "Min: {min}, Max: {max}",
+                       mem_alloc1 ~ "{p5}/{p25}/{median}/{p75}/{p95} (5%/25%/Median/75%/95%)",
+                       mem_alloc2 ~ "Mean: {mean}, SD: {sd}",
+                       secondary_memory_usage ~ "Min: {min}, Max: {max}",
+                       secondary_memory_usage1 ~ "{p5}(5%)/{p25}(25%)/{median}(Median)/{p75}(75%)/{p95}(95%)",
+                       secondary_memory_usage2 ~ "Mean: {mean}, SD: {sd}"
+                     ),
+                     label = list(
+                       time ~ "Time",
+                       time1 ~ "Time",
+                       time2 ~ "Time",
+                       mem_alloc ~ "Memory allocation (MB)",
+                       mem_alloc1 ~ "Memory allocation (MB)",
+                       mem_alloc2 ~ "Memory allocation (MB)",
+                       secondary_memory_usage ~ "Secondary memory usage (KB)",
+                       secondary_memory_usage1 ~ "Secondary memory usage (KB)",
+                       secondary_memory_usage2 ~ "Secondary memory usage (KB)")
+                     ) %>%
+    modify_footnote(all_stat_cols(FALSE) ~ NA) %>%
+  as_gt()
+```
+
+## Algorithm
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = algo, y = time, fill = algo, group = algo)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = algo, y = mem_alloc, fill = algo, group = algo)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = algo, y = secondary_memory_usage, fill = algo, group = algo)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+## Candidate matches
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cm, y = time, fill = cm, group = cm)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cm, y = mem_alloc, fill = cm, group = cm)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cm, y = secondary_memory_usage, fill = cm, group = cm)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+## Threshold to use
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = threshold_to_use, y = time, fill = threshold_to_use, group = threshold_to_use)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = threshold_to_use, y = mem_alloc, fill = threshold_to_use, group = threshold_to_use)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = threshold_to_use, y = secondary_memory_usage, fill = threshold_to_use, group = threshold_to_use)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+## Matching rules and Variable distributions
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = match_vars_label, y = time, fill = match_vars_label, group = match_vars_label)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = match_vars_label, y = mem_alloc, fill = match_vars_label, group = match_vars_label)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = match_vars_label, y = secondary_memory_usage, fill = match_vars_label, group = match_vars_label)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+## Sampling of candidate matches and bootstrap schema
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = samp_schema_label, y = time, fill = samp_schema_label, group = samp_schema_label)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  theme(axis.text.x = element_blank(), legend.position = "bottom", legend.direction="vertical")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = samp_schema_label, group = samp_schema_label)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  theme(axis.text.x = element_blank(), legend.position = "bottom", legend.direction="vertical")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, fill = samp_schema_label, group = samp_schema_label)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  theme(axis.text.x = element_blank(), legend.position = "bottom", legend.direction="vertical")
+```
+
+## Number of cores used
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cores_label, y = time, fill = cores_label, group = cores_label)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cores_label, y = mem_alloc, fill = cores_label, group = cores_label)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cores_label, y = secondary_memory_usage, fill = cores_label, group = cores_label)) +
+  stat_summary(fun = mean, geom = "bar") +  
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
+  guides(fill = "none")
+```
