@@ -2,10 +2,14 @@ Package: matchboots
 Type: Package
 Title: What the Package Does (Title Case)
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Authors@R: c(
+    person("Davide", "Messina", email = "davide.messina@ars.toscana.it", role = c("aut", "cre")),
+    person("Rosa", "Gini", role = "aut"))
+Description: Match exposed and candidate matches and optionally bootstrap results.
 License: AGPL (>= 3)
 Encoding: UTF-8
 LazyData: true
+Imports: 
+    data.table,
+    qs
+RoxygenNote: 7.3.1
