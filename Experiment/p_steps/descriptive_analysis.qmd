@@ -132,6 +132,14 @@ ggplot(bnch, aes(x = algo, y = mem_alloc, fill = algo, group = algo)) +
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = exp, y = mem_alloc, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -139,6 +147,14 @@ ggplot(bnch, aes(x = algo, y = secondary_memory_usage, fill = algo, group = algo
   stat_summary(fun = mean, geom = "bar") +  
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
+```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = exp, y = secondary_memory_usage, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
 ```
 
 ## Candidate matches
@@ -150,6 +166,14 @@ ggplot(bnch, aes(x = cm, y = time, fill = cm, group = cm)) +
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cm, y = time, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -158,6 +182,14 @@ ggplot(bnch, aes(x = cm, y = mem_alloc, fill = cm, group = cm)) +
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cm, y = mem_alloc, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -165,6 +197,14 @@ ggplot(bnch, aes(x = cm, y = secondary_memory_usage, fill = cm, group = cm)) +
   stat_summary(fun = mean, geom = "bar") +  
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
+```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cm, y = secondary_memory_usage, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
 ```
 
 ## Threshold to use
@@ -176,6 +216,14 @@ ggplot(bnch, aes(x = threshold_to_use, y = time, fill = threshold_to_use, group 
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = threshold_to_use, y = time, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -184,6 +232,14 @@ ggplot(bnch, aes(x = threshold_to_use, y = mem_alloc, fill = threshold_to_use, g
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = threshold_to_use, y = mem_alloc, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -191,6 +247,14 @@ ggplot(bnch, aes(x = threshold_to_use, y = secondary_memory_usage, fill = thresh
   stat_summary(fun = mean, geom = "bar") +  
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
+```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = threshold_to_use, y = secondary_memory_usage, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
 ```
 
 ## Matching rules and Variable distributions
@@ -202,6 +266,14 @@ ggplot(bnch, aes(x = match_vars_label, y = time, fill = match_vars_label, group 
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = match_vars_label, y = time, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -210,6 +282,14 @@ ggplot(bnch, aes(x = match_vars_label, y = mem_alloc, fill = match_vars_label, g
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = match_vars_label, y = mem_alloc, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -217,6 +297,14 @@ ggplot(bnch, aes(x = match_vars_label, y = secondary_memory_usage, fill = match_
   stat_summary(fun = mean, geom = "bar") +  
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
+```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = match_vars_label, y = secondary_memory_usage, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
 ```
 
 ## Sampling of candidate matches and bootstrap schema
@@ -228,6 +316,14 @@ ggplot(bnch, aes(x = samp_schema_label, y = time, fill = samp_schema_label, grou
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   theme(axis.text.x = element_blank(), legend.position = "bottom", legend.direction="vertical")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = samp_schema_label, y = time, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -236,6 +332,14 @@ ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = samp_schema_label,
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   theme(axis.text.x = element_blank(), legend.position = "bottom", legend.direction="vertical")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -243,6 +347,14 @@ ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, fill = samp_
   stat_summary(fun = mean, geom = "bar") +  
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   theme(axis.text.x = element_blank(), legend.position = "bottom", legend.direction="vertical")
+```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
 ```
 
 ## Number of cores used
@@ -254,6 +366,14 @@ ggplot(bnch, aes(x = cores_label, y = time, fill = cores_label, group = cores_la
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cores_label, y = time, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -262,6 +382,14 @@ ggplot(bnch, aes(x = cores_label, y = mem_alloc, fill = cores_label, group = cor
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
 ```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cores_label, y = mem_alloc, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+```
 
 ```{r}
 #| echo: false
@@ -269,4 +397,12 @@ ggplot(bnch, aes(x = cores_label, y = secondary_memory_usage, fill = cores_label
   stat_summary(fun = mean, geom = "bar") +  
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
+```
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = cores_label, y = secondary_memory_usage, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
 ```
