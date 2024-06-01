@@ -7,6 +7,11 @@ editor: visual
 ## Table 1 parameters
 
 ```{r}
+library(gtsummary)
+library(htmlwidgets)
+library(ggplot2)
+library(cowplot)
+library(data.table)
 #| echo: false
 parent_wd <- dirname(getwd())
 load(file.path(parent_wd, "g_parameters", "parameters.RData"))
@@ -39,11 +44,6 @@ bnch[, cores_label := data.table::fcase(cores_label == "C1", "Use 1 thread",
                                         cores_label == "Cdef", "Use half the threads present in the CPU")]
 
 bnch[, threshold_to_use := factor(threshold_to_use, levels = c(NA, 1, "half", "max", "double"))]
-
-library(gtsummary)
-library(htmlwidgets)
-library(ggplot2)
-
 
 
 ```
@@ -168,11 +168,17 @@ ggplot(bnch, aes(x = cm, y = time, fill = cm, group = cm)) +
 ```
 ```{r}
 #| echo: false
-ggplot(bnch, aes(x = cm, y = time, fill = algo)) + 
+algo_plot <- ggplot(bnch, aes(x = cm, y = time, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_plot <- ggplot(bnch, aes(x = cm, y = time, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_plot, exp_plot, labels = c("A", "B"), ncol = 1, nrow = 2)
 ```
 
 ```{r}
