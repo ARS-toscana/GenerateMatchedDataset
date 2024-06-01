@@ -11,17 +11,10 @@ editor: visual
 parent_wd <- dirname(getwd())
 load(file.path(parent_wd, "g_parameters", "parameters.RData"))
 
-bnch <- data.table::rbindlist(lapply(intersect(list.files(file.path(parent_wd, "g_results", "Laptop 1")),
-                                               paste0(combination_experiment[, complete_label], ".rds")), function(x) {
-  bnch <- readRDS(file.path(parent_wd, "g_results", "Laptop 1", x))
-  return(bnch[, .(complete_label, algo, time = bnch[, time][[1]], mem_alloc, size_intermediate, size_output, n_itr,
-                  exp, cm, threshold_to_use, threshold_used, match_vars_label, samp_schema_label, cores_label,
-                  model_name, no_of_cores, ram, OS_type, major, minor, version_data.table, version_qs, type_exp)])
-}))
-
 bnch <- qs::qread(file.path(parent_wd, "g_results", "Laptop 1", paste0("combined_benchmarks", ".qs")))
 
-bnch$cm <- factor(bnch$cm, levels = c("0.1", "2", "10"))
+bnch$algo <- factor(bnch$algo, levels = c("Naive", "Hash", "Threshold"))
+bnch$cm <- factor(bnch$cm, levels = sort(unique(bnch$cm)))
 bnch$mem_alloc <- bnch$mem_alloc / 1024 ^ 2
 bnch$exp <- as.factor(bnch$exp)
 bnch$threshold_to_use <- factor(bnch$threshold_to_use)
@@ -50,6 +43,16 @@ bnch[, threshold_to_use := factor(threshold_to_use, levels = c(NA, 1, "half", "m
 library(gtsummary)
 library(htmlwidgets)
 library(ggplot2)
+
+
+
+```
+
+```{r}
+#| echo: false
+car::powerTransform(bnch$time, family="bcPower")
+plot(sort(bnch$time))
+plot(log(sort(bnch$time)))
 ```
 
 ```{r}
@@ -78,26 +81,26 @@ bnch %>% mutate(time1 = time, mem_alloc1 = mem_alloc, secondary_memory_usage1 = 
                      include = c(time, time1, time2, mem_alloc, mem_alloc1, mem_alloc2, secondary_memory_usage,
                                  secondary_memory_usage1, secondary_memory_usage2),
                      statistic = list(
-                       time ~ "Min: {min}, Max: {max}",
-                       time1 ~ "5%: {p5}, 25%: {p25}, Median: {median}, 75%: {p75}, 95%: {p95}",
-                       time2 ~ "Mean: {mean}, SD: {sd}",
-                       mem_alloc ~ "Min: {min}, Max: {max}",
-                       mem_alloc1 ~ "{p5}/{p25}/{median}/{p75}/{p95} (5%/25%/Median/75%/95%)",
-                       mem_alloc2 ~ "Mean: {mean}, SD: {sd}",
-                       secondary_memory_usage ~ "Min: {min}, Max: {max}",
-                       secondary_memory_usage1 ~ "{p5}(5%)/{p25}(25%)/{median}(Median)/{p75}(75%)/{p95}(95%)",
-                       secondary_memory_usage2 ~ "Mean: {mean}, SD: {sd}"
+                       time ~ "{min} / {max}",
+                       time1 ~ "{p25} / {median} / {p75}",
+                       time2 ~ "{mean} / {sd}",
+                       mem_alloc ~ "{min} / {max}",
+                       mem_alloc1 ~ "{p25} / {median} / {p75}",
+                       mem_alloc2 ~ "{mean} / {sd}",
+                       secondary_memory_usage ~ "{min} / {max}",
+                       secondary_memory_usage1 ~ "{p25} / {median} / {p75}",
+                       secondary_memory_usage2 ~ "{mean} / {sd}"
                      ),
                      label = list(
-                       time ~ "Time",
-                       time1 ~ "Time",
-                       time2 ~ "Time",
-                       mem_alloc ~ "Memory allocation (MB)",
-                       mem_alloc1 ~ "Memory allocation (MB)",
-                       mem_alloc2 ~ "Memory allocation (MB)",
-                       secondary_memory_usage ~ "Secondary memory usage (KB)",
-                       secondary_memory_usage1 ~ "Secondary memory usage (KB)",
-                       secondary_memory_usage2 ~ "Secondary memory usage (KB)")
+                       time ~ "Time (s) (Min, Max)",
+                       time1 ~ "Time (s) (25%, Median, 75%)",
+                       time2 ~ "Time (s) (Mean, SD)",
+                       mem_alloc ~ "Memory allocation (MB) (Min, Max)",
+                       mem_alloc1 ~ "Memory allocation (MB) (25%, Median, 75%)",
+                       mem_alloc2 ~ "Memory allocation (MB) (Mean, SD)",
+                       secondary_memory_usage ~ "Secondary memory usage (KB) (Min, Max)",
+                       secondary_memory_usage1 ~ "Secondary memory usage (KB) (25%, Median, 75%)",
+                       secondary_memory_usage2 ~ "Secondary memory usage (KB) (Mean, SD)")
                      ) %>%
     modify_footnote(all_stat_cols(FALSE) ~ NA) %>%
   as_gt()
@@ -111,6 +114,15 @@ ggplot(bnch, aes(x = algo, y = time, fill = algo, group = algo)) +
   stat_summary(fun = mean, geom = "bar") +  
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
   guides(fill = "none")
+```
+
+```{r}
+#| echo: false
+ggplot(bnch, aes(x = exp, y = time, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
 ```
 
 ```{r}
