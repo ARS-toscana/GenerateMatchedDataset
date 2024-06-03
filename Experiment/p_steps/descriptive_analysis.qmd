@@ -1,22 +1,37 @@
 ---
 title: "Descriptive analysis MatchBoots"
 format: docx
+execute:
+  echo: false
 editor: visual
 ---
 
 ## Table 1 parameters
-
+  
 ```{r}
+#| output: false
+#| warning: false
+
 library(gtsummary)
 library(htmlwidgets)
 library(ggplot2)
 library(cowplot)
 library(data.table)
-#| echo: false
+library(stringr)
+```
+
+```{r}
+#| output: false
+
 parent_wd <- dirname(getwd())
 load(file.path(parent_wd, "g_parameters", "parameters.RData"))
 
-bnch <- qs::qread(file.path(parent_wd, "g_results", "Laptop 1", paste0("combined_benchmarks", ".qs")))
+# bnch <- qs::qread(file.path(parent_wd, "g_results", "Laptop 1", paste0("combined_benchmarks", ".qs")))
+bnch <- qs::qread(file.path(parent_wd, "g_results", "Server 1", paste0("combined_benchmarks", ".qs")))
+```
+
+```{r}
+#| output: false
 
 bnch$algo <- factor(bnch$algo, levels = c("Naive", "Hash", "Threshold"))
 bnch$cm <- factor(bnch$cm, levels = sort(unique(bnch$cm)))
@@ -46,13 +61,6 @@ bnch[, cores_label := data.table::fcase(cores_label == "C1", "Use 1 thread",
 bnch[, threshold_to_use := factor(threshold_to_use, levels = c(NA, 1, "half", "max", "double"))]
 
 
-```
-
-```{r}
-#| echo: false
-car::powerTransform(bnch$time, family="bcPower")
-plot(sort(bnch$time))
-plot(log(sort(bnch$time)))
 ```
 
 ```{r}
@@ -108,307 +116,481 @@ bnch %>% mutate(time1 = time, mem_alloc1 = mem_alloc, secondary_memory_usage1 = 
 
 ## Algorithm
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = algo, y = time, fill = algo, group = algo)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = exp, y = time, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = exp, y = time, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
-```
-
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = algo, y = mem_alloc, fill = algo, group = algo)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = exp, y = mem_alloc, fill = algo)) + 
+exp_box <- ggplot(bnch, aes(x = exp, y = time, fill = cm)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = exp, y = time, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = exp, y = time, fill = cm)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = algo, y = secondary_memory_usage, fill = algo, group = algo)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = exp, y = secondary_memory_usage, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = exp, y = mem_alloc, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = exp, y = mem_alloc, fill = cm)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = exp, y = mem_alloc, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = exp, y = mem_alloc, fill = cm)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+```
+
+```{r fig.height=8,fig.width=16}
+#| echo: false
+algo_box <- ggplot(bnch, aes(x = exp, y = secondary_memory_usage, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = exp, y = secondary_memory_usage, fill = cm)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = exp, y = secondary_memory_usage, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = exp, y = secondary_memory_usage, fill = cm)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
 ## Candidate matches
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = cm, y = time, fill = cm, group = cm)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-algo_plot <- ggplot(bnch, aes(x = cm, y = time, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = cm, y = time, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
-exp_plot <- ggplot(bnch, aes(x = cm, y = time, fill = exp)) + 
+exp_box <- ggplot(bnch, aes(x = cm, y = time, fill = exp)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
-plot_grid(algo_plot, exp_plot, labels = c("A", "B"), ncol = 1, nrow = 2)
+algo_vio <- ggplot(bnch, aes(x = cm, y = time, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = cm, y = time, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = cm, y = mem_alloc, fill = cm, group = cm)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = cm, y = mem_alloc, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = cm, y = mem_alloc, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = cm, y = mem_alloc, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = cm, y = mem_alloc, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = cm, y = mem_alloc, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = cm, y = secondary_memory_usage, fill = cm, group = cm)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = cm, y = secondary_memory_usage, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = cm, y = secondary_memory_usage, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = cm, y = secondary_memory_usage, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = cm, y = secondary_memory_usage, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = cm, y = secondary_memory_usage, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
 ## Threshold to use
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = threshold_to_use, y = time, fill = threshold_to_use, group = threshold_to_use)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = threshold_to_use, y = time, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = threshold_to_use, y = time, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = threshold_to_use, y = time, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = threshold_to_use, y = time, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = threshold_to_use, y = time, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = threshold_to_use, y = mem_alloc, fill = threshold_to_use, group = threshold_to_use)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = threshold_to_use, y = mem_alloc, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = threshold_to_use, y = mem_alloc, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = threshold_to_use, y = mem_alloc, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = threshold_to_use, y = mem_alloc, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = threshold_to_use, y = mem_alloc, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = threshold_to_use, y = secondary_memory_usage, fill = threshold_to_use, group = threshold_to_use)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = threshold_to_use, y = secondary_memory_usage, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = threshold_to_use, y = secondary_memory_usage, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = threshold_to_use, y = secondary_memory_usage, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = threshold_to_use, y = secondary_memory_usage, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = threshold_to_use, y = secondary_memory_usage, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
 ## Matching rules and Variable distributions
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = match_vars_label, y = time, fill = match_vars_label, group = match_vars_label)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = match_vars_label, y = time, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = match_vars_label, y = time, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = match_vars_label, y = time, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = match_vars_label, y = time, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = match_vars_label, y = time, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = match_vars_label, y = mem_alloc, fill = match_vars_label, group = match_vars_label)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = match_vars_label, y = mem_alloc, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = match_vars_label, y = mem_alloc, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = match_vars_label, y = mem_alloc, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = match_vars_label, y = mem_alloc, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = match_vars_label, y = mem_alloc, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = match_vars_label, y = secondary_memory_usage, fill = match_vars_label, group = match_vars_label)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = match_vars_label, y = secondary_memory_usage, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = match_vars_label, y = secondary_memory_usage, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = match_vars_label, y = secondary_memory_usage, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = match_vars_label, y = secondary_memory_usage, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = match_vars_label, y = secondary_memory_usage, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
 ## Sampling of candidate matches and bootstrap schema
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = samp_schema_label, y = time, fill = samp_schema_label, group = samp_schema_label)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  theme(axis.text.x = element_blank(), legend.position = "bottom", legend.direction="vertical")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = samp_schema_label, y = time, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = samp_schema_label, y = time, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
-  scale_y_log10(labels = scales::label_comma())
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_box <- ggplot(bnch, aes(x = samp_schema_label, y = time, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+algo_vio <- ggplot(bnch, aes(x = samp_schema_label, y = time, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_vio <- ggplot(bnch, aes(x = samp_schema_label, y = time, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = samp_schema_label, group = samp_schema_label)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  theme(axis.text.x = element_blank(), legend.position = "bottom", legend.direction="vertical")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
-  scale_y_log10(labels = scales::label_comma())
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_box <- ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+algo_vio <- ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_vio <- ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, fill = samp_schema_label, group = samp_schema_label)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  theme(axis.text.x = element_blank(), legend.position = "bottom", legend.direction="vertical")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
-  scale_y_log10(labels = scales::label_comma())
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_box <- ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+algo_vio <- ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_vio <- ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
 ## Number of cores used
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = cores_label, y = time, fill = cores_label, group = cores_label)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = cores_label, y = time, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = cores_label, y = time, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = cores_label, y = time, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = cores_label, y = time, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = cores_label, y = time, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = cores_label, y = mem_alloc, fill = cores_label, group = cores_label)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = cores_label, y = mem_alloc, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = cores_label, y = mem_alloc, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = cores_label, y = mem_alloc, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = cores_label, y = mem_alloc, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = cores_label, y = mem_alloc, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
-```{r}
+```{r fig.height=8,fig.width=16}
 #| echo: false
-ggplot(bnch, aes(x = cores_label, y = secondary_memory_usage, fill = cores_label, group = cores_label)) +
-  stat_summary(fun = mean, geom = "bar") +  
-  stat_summary(fun.data = mean_cl_normal, geom = "errorbar") +
-  guides(fill = "none")
-```
-```{r}
-#| echo: false
-ggplot(bnch, aes(x = cores_label, y = secondary_memory_usage, fill = algo)) + 
+algo_box <- ggplot(bnch, aes(x = cores_label, y = secondary_memory_usage, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
+exp_box <- ggplot(bnch, aes(x = cores_label, y = secondary_memory_usage, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+algo_vio <- ggplot(bnch, aes(x = cores_label, y = secondary_memory_usage, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+exp_vio <- ggplot(bnch, aes(x = cores_label, y = secondary_memory_usage, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma())
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+```
+
+```{r fig.height=8,fig.width=16}
+#| echo: false
+car::powerTransform(bnch$time, family="bcPower")
+plot(sort(bnch$time))
+plot(log(sort(bnch$time)))
 ```
