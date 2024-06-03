@@ -2,5 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
-Example 3/g_intermediate
-Example 3/g_output
+.RDataTmp
+**/g_intermediate
+**/g_output
+**/g_datasets
+**/g_parameters
+Theoretical comparison of matching method.xlsx

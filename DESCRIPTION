@@ -1,0 +1,15 @@
+Package: matchboots
+Type: Package
+Title: What the Package Does (Title Case)
+Version: 0.1.0
+Authors@R: c(
+    person("Davide", "Messina", email = "davide.messina@ars.toscana.it", role = c("aut", "cre")),
+    person("Rosa", "Gini", role = "aut"))
+Description: Match exposed and candidate matches and optionally bootstrap results.
+License: AGPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    data.table,
+    qs
+RoxygenNote: 7.3.1
