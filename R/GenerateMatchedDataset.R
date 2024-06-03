@@ -1,6 +1,6 @@
 #' @param exposed The exposed data table
 #' @param candidate_matches The candidate_matches data table
-#' @param unit_of_observation
+#' @param unit_of_observation Unit of observation
 #' @param type_of_matching Decide the type of matching. Default to 'on variables'
 #' @param time_variable_in_exposed Variable containing the days UoO are exposed. 
 #' @param time_variables_in_candidate_matches Vector with variables containing the start and end when a UoO are candidate matches
@@ -10,7 +10,7 @@
 #' @param additional_matching_rules Additional rule to be used during matches
 #' @param rule_for_matching_on_dates "exact"
 #' @param output_matching Output folder and names. After we will append bootstrap number.
-#' @param seeds_for_sampling
+#' @param seeds_for_sampling Seed for sampling for reproducibility
 #' @param temporary_folder Folder where to store intermediate dataset. Default is NULL, if TRUE then the default folder is tempdir() otherwise it is possible to pass a custom path. If TRUE or custom path the function enter RAM saving mode.
 #' @param sample_size_per_exposed Number of controls to be matched for each exposed. Default is 1
 #' @param methodology_for_bootstrapping The default for this argument is NULL so no bootstrapping. Other options are "Sample exposed" and "Sample units of observations".
@@ -19,7 +19,7 @@
 #' @param exclude_sameUoO Do not match the same UoO
 #' @param algorithm_for_matching Algorithms to test. Possible values are "naive", ...
 #' @param threshold Bin capacity to be used for creating bins based on the original dataset
-#' @param technical_details_of_matching
+#' @param technical_details_of_matching Technical details of matching
 
 GenerateMatchedDataset <- function(exposed,
                                    candidate_matches,
