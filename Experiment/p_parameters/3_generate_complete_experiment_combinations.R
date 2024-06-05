@@ -24,7 +24,7 @@ sampling_schemas <- data.table::data.table(samp_schema = c(1, "N", 1, 1),
 combination_experiment <- merge(combination_experiment[, placeholder := T], sampling_schemas[, placeholder := T],
                                 by = "placeholder", allow.cartesian = T)[, placeholder := NULL]
 
-tech_restriction <- data.table::data.table(cores = c(T, 1),
+tech_restriction <- data.table::data.table(cores = c(0, 1),
                                            cores_label = c("Cdef", "C1"))
 
 combination_experiment <- merge(combination_experiment[, placeholder := T], tech_restriction[, placeholder := T],
@@ -38,3 +38,5 @@ rm(algo_df, match_vars_df, sampling_schemas, tech_restriction)
 original_data.table_threads <- data.table::getDTthreads()
 
 data.table::setorder(combination_experiment, cores_label, match_vars_label, samp_schema_label, algo_label, label_cm, label_exp)
+
+combination_experiment <- combination_experiment[match_vars_label == "Mat2" & algo_label != "H" & cores_label == "Cdef" & samp_schema != "N", ]

@@ -11,7 +11,7 @@
 # label_cm    - label of cm_factor_ds
 
 # Restrict datasets creation in case bigger ones are not necessary (values ranges from 0 to 4)
-level_restriction <- c(2, 3, 4)
+level_restriction <- c(6, 7, 8)
 
 # list of all possible sizes of exposed
 df_size_exposed <- c(100L, 200L, 1000L, 2000L, 10000L, 20000L, 100000L, 200000L, 1000000L)
@@ -45,6 +45,7 @@ for (i in 1:length(df_size_exposed)) {
 
 combination_experiment[, magnitude := floor(log10(exp * (1 + cm)))]
 combination_experiment <- combination_experiment[magnitude %in% level_restriction]
+combination_experiment <- combination_experiment[exp == 1000000, ]
 combination_experiment[, magnitude := NULL]
 
 rm(df_size_exposed, cm_factor, cm_factor_lab, i, level_restriction)
