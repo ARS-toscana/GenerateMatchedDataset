@@ -7,7 +7,7 @@ editor: visual
 ---
 
 ## Table 1 parameters
-  
+
 ```{r}
 #| output: false
 #| warning: false
