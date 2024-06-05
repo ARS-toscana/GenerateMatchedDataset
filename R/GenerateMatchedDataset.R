@@ -1,3 +1,5 @@
+#' Generate matched datasets of exposed and candidates matches with bootstrapping
+#' 
 #' @param exposed The exposed data table
 #' @param candidate_matches The candidate_matches data table
 #' @param unit_of_observation Unit of observation
