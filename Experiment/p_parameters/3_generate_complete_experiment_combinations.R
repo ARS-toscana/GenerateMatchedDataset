@@ -40,3 +40,4 @@ original_data.table_threads <- data.table::getDTthreads()
 data.table::setorder(combination_experiment, cores_label, match_vars_label, samp_schema_label, algo_label, label_cm, label_exp)
 
 combination_experiment <- combination_experiment[match_vars_label == "Mat2" & algo_label != "H" & cores_label == "Cdef" & samp_schema != "N", ]
+data.table::setorder(combination_experiment, -algo_label, cm)
