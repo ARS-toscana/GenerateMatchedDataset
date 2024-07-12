@@ -28,6 +28,7 @@ load(file.path(parent_wd, "g_parameters", "parameters.RData"))
 
 # bnch <- qs::qread(file.path(parent_wd, "g_results", "Laptop 1", paste0("combined_benchmarks", ".qs")))
 bnch <- qs::qread(file.path(parent_wd, "g_results", "Server 1", paste0("combined_benchmarks", ".qs")))
+# bnch <- rbindlist(lapply(bnch, function(x) x[, mem_alloc := as.numeric(mem_alloc)]))
 ```
 
 ```{r}
@@ -55,10 +56,13 @@ bnch[, samp_schema_label := factor(samp_schema_label,
                                               "Sample 1 cm to each exposed and take 10 bootstrap sampling from the exposed",
                                               "Sample 1 cm to each exposed and take 10 bootstrap sampling from all UoO"))]
 
+bnch[, cores_label := "C1"]
 bnch[, cores_label := data.table::fcase(cores_label == "C1", "Use 1 thread",
                                         cores_label == "Cdef", "Use half the threads present in the CPU")]
 
 bnch[, threshold_to_use := factor(threshold_to_use, levels = c(NA, 1, "half", "max", "double"))]
+
+bnch <- bnch[!(cm == 100 & exp == 1000000), ]
 
 
 ```
@@ -141,6 +145,26 @@ exp_vio <- ggplot(bnch, aes(x = exp, y = time, fill = cm)) +
 plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
+Fig. A shows computation time plotted against the number of exposed as boxplots stratified by type of algorithm. Increments of **Naive** and **Hash** approaches seems to always be exponential and there is negligible difference between them in all combination of exposed. We could say they are well-behaved since an exponential growth was expected since increasing the size of the original tables, exposed and consequently candidate matches, by a factor of *n* results in a Cartesian products with output large the previous one by a factor of *n^2^*. The **Threshold** approach has a more interesting trend and can be better studied by dividing the analysis in Orders of Magnitude (OoM) of the number of exposed:
+
+- OoM 2-3. The increasing is much larger than **Naive** and **Hash** ones. This is probably caused by the distribution of the original data: the data generating process is random and consistent but the variability of each variable's distribution is still very high at small sample sizes. Larger sets have less variability by nature of law of large numbers. This initial variability can influence the results not during the join itself but by modifying the number of batches: a larger than expected maximum frequency of strata combinations results in a smaller number of batches and viceversa.
+
+- OoM 3-4. The increasing (~2-3X) of the **Threshold** approach is much smaller than **Naive** and **Hash** ones (10% and over). The **Threshold** approach has inherently more procedures to be done than the other ones and all of those procedure has a basic costs independently of dataset size (e.g. accessing a file on secondary memory). As the number of exposed increases those costs matter less and less compared to the real computation to be done on the dataset.
+
+- OoM 4-5. The increasing of the **Threshold** approach is again smaller than **Naive** and **Hash** ones, however it is clear the growth is no longer linear but exponential now. At OoM 5 the **Threshold** approach has the same computational cost in terms of time as the other two approaches.
+
+- OoM 5-6. **Naive** and **Hash** approaches are not present because of the error discussed above. The **Threshold** approach confirm the exponential growth seen from OoM 4-5.
+
+Fig. B shows the distribution of computation time plotted against the number of exposed stratified by type of algorithm.
+Additionally to what has already been discussed in Fig. A. Low OoMs have more peculiar distributions, lower results even bimodal, which tends as OoM grows to a more symmetric one. OoM 6 is an exception probably due to the low number of comaination of experiments.
+The bimodal distributions at low OoMs may be due to the basic cost discussed in Fig. A OoM 3-4.
+
+Fig. C shows computation time plotted against the number of exposed as boxplots stratified by proportion of additional candidate matches.
+Fig. D shows the distribution of computation time plotted against the number of exposed stratified by proportion of additional candidate matches.
+Increasing the proportion of additional candidate matches seems to have a different effect across OoMs: the growth is always exponential but it is faster as OoM increases. It is possible this trend stops after OoM 4 however we don't have enough stratification for candidate matches to reach a conclusion.
+Opposite to Fig. A here the more distributions happens at OoM 5, especially 20000, this is probably due to the matching rules which effect we will se in Fig X have a not constant effect across exposed dataset size.
+
+
 ```{r fig.height=8,fig.width=16}
 #| echo: false
 algo_box <- ggplot(bnch, aes(x = exp, y = mem_alloc, fill = algo)) + 
@@ -166,6 +190,22 @@ exp_vio <- ggplot(bnch, aes(x = exp, y = mem_alloc, fill = cm)) +
 plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
 
+Fig. A shows total memory allocated on RAM plotted against the number of exposed as boxplots stratified by type of algorithm.
+Fig. B shows the distribution of total memory allocated on RAM plotted against the number of exposed stratified by type of algorithm.
+Fig. C shows total memory allocated on RAM plotted against the number of exposed as boxplots stratified by proportion of additional candidate matches.
+Fig. D shows the distribution of total memory allocated on RAM plotted against the number of exposed stratified by proportion of additional candidate matches.
+
+These plots are very similar to ones with respect to computation time.
+There are two man difference:
+
+- At low OoM of exposed the difference between **Naive**/**Hash** approaches compared to **Threshold** one. Probably the some basic costs discussed at Fig. A OoM 3-4 disproportionately impact time and not memory. An example would be again the access to a file on disk: it does not require allocation on RAM but require a certain amount of time.
+
+- At high OoM of exposed some differences are still present between approaches even between **Naive** and **Hash**.
+  - **Hash** and **Threshold** need to compute, save and reload hash tables which require allocations.
+  - **Threshold** need to compute, save partial joined dataset to be reloaded later on.
+
+
+
 ```{r fig.height=8,fig.width=16}
 #| echo: false
 algo_box <- ggplot(bnch, aes(x = exp, y = secondary_memory_usage, fill = algo)) + 
@@ -189,6 +229,25 @@ exp_vio <- ggplot(bnch, aes(x = exp, y = secondary_memory_usage, fill = cm)) +
                 show.legend = FALSE) +
   scale_y_log10(labels = scales::label_comma())
 plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+```
+
+Fig. A shows secondary memory usage plotted against the number of exposed as boxplots stratified by type of algorithm.
+Fig. B shows the distribution of secondary memory usage plotted against the number of exposed stratified by type of algorithm.
+Fig. C shows secondary memory usage plotted against the number of exposed as boxplots stratified by proportion of additional candidate matches.
+Fig. D shows the distribution of secondary memory usage plotted against the number of exposed stratified by proportion of additional candidate matches.
+
+Compared to computation time and total memory allocated on RAM the trends seems much more linear. We have more outliers than before but they are probably due to randomness in the data that needs to be compressed and efficiency in finding patters of the algorithm used by the qs package.
+The maximum for 20000 exposed is around ~700MB since there increase is linear we can deduce that even for higher OoM of exposed the size of the data on disk should not became an issue, especially consider most of this space is temporary space used to store intermediate datasets. Once the computation of the function has finished we could safely removed those file from disk.
+Since secondary memory usage won't be an issue in general later plots with respect to this metric won't be commented but are still available in appendix.
+
+```{r}
+#| output: false
+
+bnch_ori <- copy(bnch)
+bnch <- bnch[!(exp %in% c(1000, 2000) & cm == 1000), ]
+bnch <- bnch[!(exp %in% c(100000, 200000) & cm == 10), ]
+bnch <- bnch[exp != 1000000, ]
+
 ```
 
 ## Candidate matches
@@ -217,6 +276,10 @@ exp_vio <- ggplot(bnch, aes(x = cm, y = time, fill = exp)) +
   scale_y_log10(labels = scales::label_comma())
 plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
 ```
+Fig. A shows computation time plotted against the number of exposed as boxplots stratified by type of algorithm.
+Fig. B shows the distribution of computation time plotted against the number of exposed stratified by type of algorithm.
+Fig. C shows computation time plotted against the number of exposed as boxplots stratified by proportion of additional candidate matches.
+Fig. D shows the distribution of computation time plotted against the number of exposed stratified by proportion of additional candidate matches.
 
 ```{r fig.height=8,fig.width=16}
 #| echo: false
@@ -455,6 +518,35 @@ plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), 
 
 ```{r fig.height=8,fig.width=16}
 #| echo: false
+algo_box <- ggplot(bnch_ori, aes(x = samp_schema_label, y = time, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_box <- ggplot(bnch_ori, aes(x = samp_schema_label, y = time, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+algo_vio <- ggplot(bnch_ori, aes(x = samp_schema_label, y = time, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_vio <- ggplot(bnch_ori, aes(x = samp_schema_label, y = time, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+```
+
+```{r fig.height=8,fig.width=16}
+#| echo: false
 algo_box <- ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = algo)) + 
     geom_boxplot() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
@@ -474,6 +566,34 @@ algo_vio <- ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = algo))
   scale_y_log10(labels = scales::label_comma()) +
   scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
 exp_vio <- ggplot(bnch, aes(x = samp_schema_label, y = mem_alloc, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+```
+```{r fig.height=8,fig.width=16}
+#| echo: false
+algo_box <- ggplot(bnch_ori, aes(x = samp_schema_label, y = mem_alloc, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_box <- ggplot(bnch_ori, aes(x = samp_schema_label, y = mem_alloc, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+algo_vio <- ggplot(bnch_ori, aes(x = samp_schema_label, y = mem_alloc, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_vio <- ggplot(bnch_ori, aes(x = samp_schema_label, y = mem_alloc, fill = exp)) + 
     geom_violin() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
                 show.legend = FALSE) +
@@ -503,6 +623,34 @@ algo_vio <- ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, 
   scale_y_log10(labels = scales::label_comma()) +
   scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
 exp_vio <- ggplot(bnch, aes(x = samp_schema_label, y = secondary_memory_usage, fill = exp)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+plot_grid(algo_box, algo_vio, exp_box, exp_vio, labels = c("A", "B", "C", "D"), ncol = 2, nrow = 2)
+```
+```{r fig.height=8,fig.width=16}
+#| echo: false
+algo_box <- ggplot(bnch_ori, aes(x = samp_schema_label, y = secondary_memory_usage, fill = algo)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_box <- ggplot(bnch_ori, aes(x = samp_schema_label, y = secondary_memory_usage, fill = exp)) + 
+    geom_boxplot() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.775), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+algo_vio <- ggplot(bnch_ori, aes(x = samp_schema_label, y = secondary_memory_usage, fill = algo)) + 
+    geom_violin() +
+    stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
+                show.legend = FALSE) +
+  scale_y_log10(labels = scales::label_comma()) +
+  scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 20))
+exp_vio <- ggplot(bnch_ori, aes(x = samp_schema_label, y = secondary_memory_usage, fill = exp)) + 
     geom_violin() +
     stat_summary(fun = mean, geom = "point", shape = 20, position = position_dodge(0.9), size = 4, color = "red",
                 show.legend = FALSE) +
