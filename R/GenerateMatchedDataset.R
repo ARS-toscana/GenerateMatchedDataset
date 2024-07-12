@@ -56,6 +56,9 @@ GenerateMatchedDataset <- function(exposed,
 
   names(variables_with_range_matching) <- variables_with_range_matching
 
+  time_variables_in_candidate_matches <- unique(time_variables_in_candidate_matches)
+  flag_single_time_var <- if (length(time_variables_in_candidate_matches) == 1) T else F
+
   # Remove columns not used during the matching and not primary keys
   # TODO write routine to minimize number of hash tables
   # TODO to prevent different number of rows create if possible single table from entire population
@@ -122,8 +125,14 @@ GenerateMatchedDataset <- function(exposed,
   }
 
   # Define the set of rules to be used during matching for variables with predefined intervals
-  list_time_ranges_rules <- list(paste0(time_variable_in_exposed, " <= ", time_variables_in_candidate_matches[[2]]),
-                                 paste0(time_variable_in_exposed, " >= ", time_variables_in_candidate_matches[[1]]))
+  if (flag_single_time_var) {
+    list_time_ranges_rules <- list(paste0(time_variable_in_exposed, " == ", time_variables_in_candidate_matches))
+  } else {
+    list_time_ranges_rules <- list(paste0(time_variable_in_exposed, " <= ", time_variables_in_candidate_matches[[2]]),
+                                   paste0(time_variable_in_exposed, " >= ", time_variables_in_candidate_matches[[1]]))
+  }
+
+
 
   # Define join rules and column to be retained after the join
   strata_after_join <- c(unit_of_observation, paste0("i.", unit_of_observation))
