@@ -1,7 +1,7 @@
 Package: matchboots
 Type: Package
 Title: What the Package Does (Title Case)
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(
     person("Davide", "Messina", email = "davide.messina@ars.toscana.it", role = c("aut", "cre")),
     person("Rosa", "Gini", role = "aut"))
