@@ -138,6 +138,7 @@ GenerateMatchedDataset <- function(exposed,
   strata_after_join <- c(unit_of_observation, paste0("i.", unit_of_observation))
   join_rules <- c(exact_strata_col, unlist(data.table::transpose(list_simple_ranges_rules)),
                   unlist(data.table::transpose(list_time_ranges_rules)))
+  if (flag_single_time_var & !is.null(time_variables_in_candidate_matches) & time_variables_in_candidate_matches == time_variable_in_exposed) time_variables_in_candidate_matches <- c()
   cols_after_join <- c(strata_after_join, exact_strata_col,
                        variables_with_range_matching, time_variable_in_exposed, time_variables_in_candidate_matches)
   if (!is.null(time_variable_in_exposed)) cols_after_join <- c(cols_after_join, paste0("x.", time_variable_in_exposed))

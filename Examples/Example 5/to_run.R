@@ -5,13 +5,16 @@ unlink("Examples/Example 5/g_output", recursive = T)
 dir.create("Examples/Example 5/g_intermediate")
 dir.create("Examples/Example 5/g_output", recursive = T)
 exposed <- data.table::fread("Examples/test_with_simulated_data/exposed_1000.csv")
-candidate_matches = data.table::fread("Examples/test_with_simulated_data/candidate_matches_1000.csv")
+candidate_matches <- data.table::fread("Examples/test_with_simulated_data/candidate_matches_1000.csv")
+
+data.table::setnames(exposed, "vax1_day", "t0")
+data.table::setnames(candidate_matches, "start", "t0")
 
 GenerateMatchedDataset(exposed = data.table::copy(exposed),
                        candidate_matches = data.table::copy(candidate_matches),
                        unit_of_observation = c("person_id"),
-                       time_variable_in_exposed = c("vax1_day"),
-                       time_variables_in_candidate_matches = c("start", "start"),
+                       time_variable_in_exposed = c("t0"),
+                       time_variables_in_candidate_matches = c("t0"),
                        variables_with_exact_matching = c("SES", "REGION"),
                        variables_with_range_matching = c("age"),
                        range_of_variables_with_range_matching = list(c(-1, 1)),
