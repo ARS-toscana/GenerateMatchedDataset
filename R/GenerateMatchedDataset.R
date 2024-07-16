@@ -54,6 +54,10 @@ GenerateMatchedDataset <- function(exposed,
   # Get number of threads to use for qs
   data.table_threads <- data.table::getDTthreads()
 
+  df_exp <- data.table::copy(exposed)
+  df_cm <- data.table::copy(candidate_matches)
+  rm(exposed, candidate_matches)
+
   names(variables_with_range_matching) <- variables_with_range_matching
 
   time_variables_in_candidate_matches <- unique(time_variables_in_candidate_matches)
@@ -62,24 +66,24 @@ GenerateMatchedDataset <- function(exposed,
   # Remove columns not used during the matching and not primary keys
   # TODO write routine to minimize number of hash tables
   # TODO to prevent different number of rows create if possible single table from entire population
-  excl_cols_exp <- setdiff(colnames(exposed), c(variables_with_exact_matching, variables_with_range_matching,
+  excl_cols_exp <- setdiff(colnames(df_exp), c(variables_with_exact_matching, variables_with_range_matching,
                                                 unit_of_observation, time_variable_in_exposed,
                                                 time_variables_in_candidate_matches))
   excl_cols_exp_real <- c(unit_of_observation, excl_cols_exp)
-  excl_cols_cand <- setdiff(colnames(candidate_matches), c(variables_with_exact_matching, variables_with_range_matching,
+  excl_cols_cand <- setdiff(colnames(df_cm), c(variables_with_exact_matching, variables_with_range_matching,
                                                            unit_of_observation, time_variables_in_candidate_matches,
                                                            time_variable_in_exposed))
   excl_cols_cand_real <- c(unit_of_observation, excl_cols_cand)
 
   if (!identical(excl_cols_exp, character(0))) {
-    qs::qsave(unique(exposed[, ..excl_cols_exp_real]),
+    qs::qsave(unique(df_exp[, ..excl_cols_exp_real]),
               file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table_threads)
-    exposed[, (excl_cols_exp) := NULL]
+    df_exp[, (excl_cols_exp) := NULL]
   }
   if (!identical(excl_cols_cand, character(0))) {
-    qs::qsave(unique(candidate_matches[, ..excl_cols_cand_real]),
+    qs::qsave(unique(df_cm[, ..excl_cols_cand_real]),
               file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table_threads)
-    candidate_matches[, (excl_cols_cand) := NULL]
+    df_cm[, (excl_cols_cand) := NULL]
   }
 
   rm(excl_cols_exp_real, excl_cols_cand_real)
@@ -90,18 +94,18 @@ GenerateMatchedDataset <- function(exposed,
   if (!is.null(variables_with_exact_matching)) {
     exact_strata_col <- "exact_strata"
 
-    hash_table_exact <- unique(data.table::rbindlist(list(unique(exposed[, ..variables_with_exact_matching]),
-                                                          unique(candidate_matches[, ..variables_with_exact_matching]))))
+    hash_table_exact <- unique(data.table::rbindlist(list(unique(df_exp[, ..variables_with_exact_matching]),
+                                                          unique(df_cm[, ..variables_with_exact_matching]))))
     hash_table_exact[, exact_strata := 1:.N]
     qs::qsave(hash_table_exact,
               file.path(temporary_folder, "HT_exact"), nthreads = data.table_threads)
-    exposed <- exposed[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
-    candidate_matches <- candidate_matches[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
+    df_exp <- df_exp[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
+    df_cm <- df_cm[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
     rm(hash_table_exact)
   }
 
   # Define a lower and upper boundaries for variables with ranges
-  # In exposed create variables for the boundaries
+  # In df_exp create variables for the boundaries
   # Define the set of rules to be used during matching
   list_simple_ranges_rules <- list()
   lower_boundaries <- character()
@@ -113,13 +117,13 @@ GenerateMatchedDataset <- function(exposed,
     names(lower_boundaries) <- paste0("lower_interval_", names(variables_with_range_matching))
     upper_boundaries <- unlist(range_of_variables_with_range_matching)[c(FALSE, TRUE)]
     names(upper_boundaries) <- paste0("upper_interval_", names(variables_with_range_matching))
-    data.table::setnames(exposed, variables_with_range_matching, names(lower_boundaries))
+    data.table::setnames(df_exp, variables_with_range_matching, names(lower_boundaries))
 
     list_simple_ranges_rules <- list(paste0(names(lower_boundaries), " <= ", variables_with_range_matching),
                                      paste0(names(upper_boundaries), " >= ", variables_with_range_matching))
 
-    exposed[, (names(lower_boundaries)) := Map(`+`, .SD, lower_boundaries), .SDcols = names(lower_boundaries)]
-    exposed[, (names(upper_boundaries)) := Map(`+`, .SD, upper_boundaries - lower_boundaries),
+    df_exp[, (names(lower_boundaries)) := Map(`+`, .SD, lower_boundaries), .SDcols = names(lower_boundaries)]
+    df_exp[, (names(upper_boundaries)) := Map(`+`, .SD, upper_boundaries - lower_boundaries),
             .SDcols = names(lower_boundaries)]
 
   }
@@ -145,9 +149,9 @@ GenerateMatchedDataset <- function(exposed,
   if (!is.null(variables_with_range_matching)) cols_after_join <- c(cols_after_join, paste0("x.", names(lower_boundaries)))
 
   # Calculate the theoretical number of combination of each exact strata
-  exposed_tr <- exposed[, .N, by = c(exact_strata_col, names(lower_boundaries), names(upper_boundaries))]
+  exposed_tr <- df_exp[, .N, by = c(exact_strata_col, names(lower_boundaries), names(upper_boundaries))]
   exposed_tr[, N := as.numeric(N)]
-  candidate_tr <- candidate_matches[, .N, by = c(exact_strata_col, variables_with_range_matching)]
+  candidate_tr <- df_cm[, .N, by = c(exact_strata_col, variables_with_range_matching)]
   exposed_tr[, N := as.numeric(N)]
   cols_to_include <- c(exact_strata_col, variables_with_range_matching)
   if (!is.null(variables_with_range_matching)) {
@@ -212,14 +216,14 @@ GenerateMatchedDataset <- function(exposed,
 
   # Save each batch in a separate file
   for (batch_n in 1:N_of_batches) {
-    cols_exp <- colnames(exposed)
+    cols_exp <- colnames(df_exp)
     cols_to_keep <- intersect(colnames(complete_tr), cols_exp)
-    qs::qsave(exposed[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_exp,
+    qs::qsave(df_exp[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_exp,
                       on = cols_to_keep, allow.cartesian = TRUE],
               file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
-    cols_cand <- colnames(candidate_matches)
+    cols_cand <- colnames(df_cm)
     cols_to_keep <- intersect(colnames(complete_tr), cols_cand)
-    qs::qsave(candidate_matches[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_cand,
+    qs::qsave(df_cm[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_cand,
                                 on = cols_to_keep, allow.cartesian = TRUE],
               file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
   }
@@ -227,12 +231,12 @@ GenerateMatchedDataset <- function(exposed,
 
   if (methodology_for_bootstrapping %in% c("SExp", "SUoO")) {
 
-    # Get unique UoO and then remove exposed and candidate_matches dataset since they are not used anymore
+    # Get unique UoO and then remove df_exp and df_cm dataset since they are not used anymore
     if (methodology_for_bootstrapping == "SExp") {
-      distinct_UoO <- unique(exposed[, ..unit_of_observation])
+      distinct_UoO <- unique(df_exp[, ..unit_of_observation])
     } else if (methodology_for_bootstrapping == "SUoO") {
-      distinct_UoO <- unique(data.table::rbindlist(list(exposed[, ..unit_of_observation],
-                                                        candidate_matches[, ..unit_of_observation])))
+      distinct_UoO <- unique(data.table::rbindlist(list(df_exp[, ..unit_of_observation],
+                                                        df_cm[, ..unit_of_observation])))
     }
 
     # Generate samples of UoO and save them
@@ -253,7 +257,7 @@ GenerateMatchedDataset <- function(exposed,
     }
     rm(distinct_UoO)
   }
-  rm(exposed, candidate_matches)
+  rm(df_exp, df_cm)
 
 
   # For each batch calculate the bootstrap samples
@@ -300,14 +304,14 @@ GenerateMatchedDataset <- function(exposed,
 
     set.seed(seeds_for_sampling)
 
-    # Create the bootstrap sample and then extract a number of controls for each exposed
+    # Create the bootstrap sample and then extract a number of controls for each df_exp
     # Save the dataset
     data.table::setkeyv(matched_df, unit_of_observation)
     if (T) {
 
       bootstrap_sample <- data.table::copy(matched_df)
 
-      # Extract a number of controls for each exposed
+      # Extract a number of controls for each df_exp
       if (sample_size_per_exposed != "N") {
         bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
                                                               by = unit_of_observation][[2]]]
@@ -319,7 +323,7 @@ GenerateMatchedDataset <- function(exposed,
       rm(bootstrap_sample)
     }
 
-    # Create the bootstrap sample and then extract a number of controls for each exposed
+    # Create the bootstrap sample and then extract a number of controls for each df_exp
     # Save the dataset
     if (methodology_for_bootstrapping %in% c("SExp", "SUoO")) {
       for (i in 1:number_of_bootstrapping_samples) {
@@ -340,7 +344,7 @@ GenerateMatchedDataset <- function(exposed,
 
 
 
-        # Extract a number of controls for each exposed
+        # Extract a number of controls for each df_exp
         if (sample_size_per_exposed != "N") {
           bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
                                                                 by = unit_of_observation][[2]]]
