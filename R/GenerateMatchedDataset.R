@@ -272,7 +272,8 @@ GenerateMatchedDataset <- function(exposed,
     data.table::setDT(candidate_filtered)
 
     # Matching
-    matched_df <- exposed_filtered[candidate_filtered, ..cols_after_join, on = join_rules, nomatch = NULL]
+    matched_df <- exposed_filtered[candidate_filtered, ..cols_after_join, on = join_rules, nomatch = NULL,
+                                   allow.cartesian = TRUE]
     rm(candidate_filtered, exposed_filtered)
 
     # Remove same UoO if necessary
