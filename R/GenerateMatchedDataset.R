@@ -272,8 +272,7 @@ GenerateMatchedDataset <- function(exposed,
     data.table::setDT(candidate_filtered)
 
     # Matching
-    matched_df <- exposed_filtered[candidate_filtered, ..cols_after_join, on = join_rules, nomatch = NULL,
-                                   allow.cartesian = TRUE]
+    matched_df <- exposed_filtered[candidate_filtered, ..cols_after_join, on = join_rules, nomatch = NULL, allow.cartesian = TRUE]
     rm(candidate_filtered, exposed_filtered)
 
     # Remove same UoO if necessary
@@ -384,7 +383,7 @@ GenerateMatchedDataset <- function(exposed,
     if (!identical(excl_cols_cand, character(0))) {
       hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
       tmp <- tmp[hash_table_excl_cand, on = paste(paste0("i.", unit_of_observation), "==", unit_of_observation,
-                                                  collapse = ", "), nomatch = NULL]
+                                                  collapse = ", "), nomatch = NULL, allow.cartesian = T]
     }
 
     # Helps in defining the column order
@@ -438,7 +437,7 @@ GenerateMatchedDataset <- function(exposed,
       if (!identical(excl_cols_cand, character(0))) {
         hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
         tmp <- tmp[hash_table_excl_cand, on = paste(paste0("i.", unit_of_observation), "==", unit_of_observation,
-                                                    collapse = ", "), nomatch = NULL]
+                                                    collapse = ", "), nomatch = NULL, allow.cartesian = T]
       }
 
       # Helps in defining the column order
