@@ -22,6 +22,7 @@
 #' @param algorithm_for_matching Algorithms to test. Possible values are "naive", ...
 #' @param threshold Bin capacity to be used for creating bins based on the original dataset
 #' @param technical_details_of_matching Technical details of matching
+#' @param exclude_columns How to exclude columns
 
 GenerateMatchedDataset <- function(exposed,
                                    candidate_matches,
@@ -44,7 +45,8 @@ GenerateMatchedDataset <- function(exposed,
                                    algorithm_for_matching = NULL,
                                    threshold = NULL,
                                    technical_details_of_matching = NULL,
-                                   temporary_folder = NULL) {
+                                   temporary_folder = NULL,
+                                   exclude_columns = T) {
 
   # preamble <- "person_id != i.person_id & vax1_day >= start & vax1_day < end"
   # TODO Transform UoO to integer
@@ -69,24 +71,38 @@ GenerateMatchedDataset <- function(exposed,
   excl_cols_exp <- setdiff(colnames(df_exp), c(variables_with_exact_matching, variables_with_range_matching,
                                                 unit_of_observation, time_variable_in_exposed,
                                                 time_variables_in_candidate_matches))
-  excl_cols_exp_real <- c(unit_of_observation, excl_cols_exp)
+  excl_strata_col_exp <- character()
+  # TODO add option for column list
+  if (isTRUE(exclude_columns) & !identical(excl_cols_exp, character(0))) {
+    df_exp[, excl_strata_exp := 1:.N]
+    excl_strata_col_exp <- "excl_strata_exp"
+
+    excl_cols_exp_real <- c(excl_strata_col_exp, excl_cols_exp)
+    if (!identical(excl_cols_exp, character(0))) {
+      qs::qsave(unique(df_exp[, ..excl_cols_exp_real]),
+                file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table_threads)
+      df_exp[, (excl_cols_exp) := NULL]
+    }
+    rm(excl_cols_exp_real)
+  }
+
   excl_cols_cand <- setdiff(colnames(df_cm), c(variables_with_exact_matching, variables_with_range_matching,
                                                            unit_of_observation, time_variables_in_candidate_matches,
                                                            time_variable_in_exposed))
-  excl_cols_cand_real <- c(unit_of_observation, excl_cols_cand)
+  excl_strata_col_cand <- character()
+  # TODO add option for column list
+  if (isTRUE(exclude_columns) & !identical(excl_cols_cand, character(0))) {
+    df_cm[, excl_strata_cm := 1:.N]
+    excl_strata_col_cand <- "excl_strata_cm"
 
-  if (!identical(excl_cols_exp, character(0))) {
-    qs::qsave(unique(df_exp[, ..excl_cols_exp_real]),
-              file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table_threads)
-    df_exp[, (excl_cols_exp) := NULL]
+    excl_cols_cand_real <- c(excl_strata_col_cand, excl_cols_cand)
+    if (!identical(excl_cols_cand, character(0))) {
+      qs::qsave(unique(df_cm[, ..excl_cols_cand_real]),
+                file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table_threads)
+      df_cm[, (excl_cols_cand) := NULL]
+    }
+    rm(excl_cols_cand_real)
   }
-  if (!identical(excl_cols_cand, character(0))) {
-    qs::qsave(unique(df_cm[, ..excl_cols_cand_real]),
-              file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table_threads)
-    df_cm[, (excl_cols_cand) := NULL]
-  }
-
-  rm(excl_cols_exp_real, excl_cols_cand_real)
 
   # Recode using an hash table the variables with exact matching
   # Check if exact strata columns are defined
@@ -147,6 +163,7 @@ GenerateMatchedDataset <- function(exposed,
                        variables_with_range_matching, time_variable_in_exposed, time_variables_in_candidate_matches)
   if (!is.null(time_variable_in_exposed)) cols_after_join <- c(cols_after_join, paste0("x.", time_variable_in_exposed))
   if (!is.null(variables_with_range_matching)) cols_after_join <- c(cols_after_join, paste0("x.", names(lower_boundaries)))
+  cols_after_join <- c(cols_after_join, excl_strata_col_exp, excl_strata_col_cand)
 
   # Calculate the theoretical number of combination of each exact strata
   exposed_tr <- df_exp[, .N, by = c(exact_strata_col, names(lower_boundaries), names(upper_boundaries))]
@@ -375,15 +392,14 @@ GenerateMatchedDataset <- function(exposed,
     }
     rm(hash_table_exact)
 
-    if (!identical(excl_cols_exp, character(0))) {
+    if (isTRUE(exclude_columns) & !identical(excl_cols_exp, character(0))) {
       hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
-      tmp <- tmp[hash_table_excl_exp, on = unit_of_observation, nomatch = NULL]
+      tmp <- tmp[hash_table_excl_exp, on = excl_strata_col_exp, nomatch = NULL]
     }
 
-    if (!identical(excl_cols_cand, character(0))) {
+    if (isTRUE(exclude_columns) & !identical(excl_cols_cand, character(0))) {
       hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
-      tmp <- tmp[hash_table_excl_cand, on = paste(paste0("i.", unit_of_observation), "==", unit_of_observation,
-                                                  collapse = ", "), nomatch = NULL, allow.cartesian = T]
+      tmp <- tmp[hash_table_excl_cand, on = excl_strata_col_cand, nomatch = NULL, allow.cartesian = T]
     }
 
     # Helps in defining the column order
@@ -428,16 +444,14 @@ GenerateMatchedDataset <- function(exposed,
         tmp <- tmp[hash_table_exact, on = c(exact_strata_col), nomatch = NULL][, exact_strata := NULL]
       }
       rm(hash_table_exact)
-
-      if (!identical(excl_cols_exp, character(0))) {
+      if (isTRUE(exclude_columns) & !identical(excl_cols_exp, character(0))) {
         hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
-        tmp <- tmp[hash_table_excl_exp, on = unit_of_observation, nomatch = NULL]
+        tmp <- tmp[hash_table_excl_exp, on = excl_strata_col_exp, nomatch = NULL]
       }
 
-      if (!identical(excl_cols_cand, character(0))) {
+      if (isTRUE(exclude_columns) & !identical(excl_cols_cand, character(0))) {
         hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
-        tmp <- tmp[hash_table_excl_cand, on = paste(paste0("i.", unit_of_observation), "==", unit_of_observation,
-                                                    collapse = ", "), nomatch = NULL, allow.cartesian = T]
+        tmp <- tmp[hash_table_excl_cand, on = excl_strata_col_cand, nomatch = NULL, allow.cartesian = T]
       }
 
       # Helps in defining the column order
