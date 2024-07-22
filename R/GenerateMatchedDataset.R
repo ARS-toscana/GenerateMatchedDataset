@@ -395,11 +395,13 @@ GenerateMatchedDataset <- function(exposed,
     if (isTRUE(exclude_columns) & !identical(excl_cols_exp, character(0))) {
       hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
       tmp <- tmp[hash_table_excl_exp, on = excl_strata_col_exp, nomatch = NULL]
+      tmp[, (excl_strata_col_exp) := NULL]
     }
 
     if (isTRUE(exclude_columns) & !identical(excl_cols_cand, character(0))) {
       hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
       tmp <- tmp[hash_table_excl_cand, on = excl_strata_col_cand, nomatch = NULL, allow.cartesian = T]
+      tmp[, (excl_strata_col_cand) := NULL]
     }
 
     # Helps in defining the column order
@@ -447,11 +449,13 @@ GenerateMatchedDataset <- function(exposed,
       if (isTRUE(exclude_columns) & !identical(excl_cols_exp, character(0))) {
         hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
         tmp <- tmp[hash_table_excl_exp, on = excl_strata_col_exp, nomatch = NULL]
+        tmp[, (excl_strata_col_exp) := NULL]
       }
 
       if (isTRUE(exclude_columns) & !identical(excl_cols_cand, character(0))) {
         hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
         tmp <- tmp[hash_table_excl_cand, on = excl_strata_col_cand, nomatch = NULL, allow.cartesian = T]
+        tmp[, (excl_strata_col_cand) := NULL]
       }
 
       # Helps in defining the column order
