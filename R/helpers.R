@@ -1,3 +1,29 @@
+clean_parameters <- function() {
+  exposed <- checkmate::assert_data_frame(exposed, any.missing = F, min.rows = 1, min.cols = 1)
+  candidate_matches <- checkmate::assert_data_frame(candidate_matches, any.missing = F, min.rows = 1, min.cols = 1)
+  unit_of_observation <- checkmate::checkAtomicVector(unit_of_observation, any.missing = F, min.len = 1, unique = T)
+  type_of_matching = 'on variables',
+  time_variable_in_exposed = NULL,
+  time_variables_in_candidate_matches = NULL,
+  variables_with_exact_matching = NULL,
+  variables_with_range_matching = NULL,
+  range_of_variables_with_range_matching = NULL,
+  additional_matching_rules = NULL,
+  rule_for_matching_on_dates = NULL,
+  output_matching = NULL,
+  seeds_for_sampling = NULL,
+  sample_size_per_exposed = 1,
+  methodology_for_bootstrapping = "No bootstrapping",
+  number_of_bootstrapping_samples = 100,
+  type_of_sampling = NULL,
+  exclude_sameUoO = TRUE,
+  algorithm_for_matching = NULL,
+  threshold = NULL,
+  technical_details_of_matching = NULL,
+  temporary_folder = NULL,
+  exclude_columns = T
+}
+
 group_integers <- function(values, threshold) {
 
   names(values) <- 1:length(values)
