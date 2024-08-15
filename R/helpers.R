@@ -1,27 +1,32 @@
 clean_parameters <- function() {
   exposed <- checkmate::assert_data_frame(exposed, any.missing = F, min.rows = 1, min.cols = 1)
   candidate_matches <- checkmate::assert_data_frame(candidate_matches, any.missing = F, min.rows = 1, min.cols = 1)
+  # TODO add assertion to check unit_of_observation values inside columns names of exposed and candidate_matches
   unit_of_observation <- checkmate::checkAtomicVector(unit_of_observation, any.missing = F, min.len = 1, unique = T)
-  type_of_matching = 'on variables',
-  time_variable_in_exposed = NULL,
-  time_variables_in_candidate_matches = NULL,
-  variables_with_exact_matching = NULL,
-  variables_with_range_matching = NULL,
+
+  type_of_matching
+  # TODO add assertion to check time_variable values inside columns names of exposed and candidate_matches
+  time_variable_in_exposed <- checkmate::checkAtomicVector(time_variable_in_exposed, any.missing = F, len = 1, unique = T)
+  time_variables_in_candidate_matches <- checkmate::checkAtomicVector(time_variables_in_candidate_matches, any.missing = F, len = 1, unique = T)
+  variables_with_exact_matching <- checkmate::checkAtomicVector(variables_with_exact_matching, any.missing = F, min.len = 1, unique = T)
+  variables_with_range_matching <- checkmate::checkAtomicVector(variables_with_range_matching, any.missing = F, min.len = 1, unique = T)
+
   range_of_variables_with_range_matching = NULL,
   additional_matching_rules = NULL,
   rule_for_matching_on_dates = NULL,
   output_matching = NULL,
-  seeds_for_sampling = NULL,
-  sample_size_per_exposed = 1,
-  methodology_for_bootstrapping = "No bootstrapping",
-  number_of_bootstrapping_samples = 100,
-  type_of_sampling = NULL,
-  exclude_sameUoO = TRUE,
-  algorithm_for_matching = NULL,
-  threshold = NULL,
+  seeds_for_sampling <- assert_count(seeds_for_sampling, coerce = T, null.ok = T)
+  sample_size_per_exposed <- assert_count(sample_size_per_exposed, positive = T, coerce = T)
+  methodology_for_bootstrapping <- assert_choice(methodology_for_bootstrapping,
+                                                 c("No bootstrapping", "Sample exposed", "Sample units of observations"))
+  number_of_bootstrapping_samples <- assert_count(number_of_bootstrapping_samples, coerce = T)
+  type_of_sampling <- assert_choice(type_of_sampling, c("with replacement", "without replacement"))
+  exclude_sameUoO <- assert_flag(exclude_sameUoO)
+  algorithm_for_matching <- assert_choice(type_of_sampling, c("naive", "with threshold"))
+  threshold <- assert_count(threshold, coerce = T, null.ok = T)
   technical_details_of_matching = NULL,
   temporary_folder = NULL,
-  exclude_columns = T
+  exclude_columns <- assert_flag(exclude_columns)
 }
 
 group_integers <- function(values, threshold) {
