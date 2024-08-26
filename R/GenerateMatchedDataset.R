@@ -246,6 +246,8 @@ GenerateMatchedDataset <- function(exposed,
   }
   rm(complete_tr, cols_exp, cols_cand, cols_to_keep)
 
+  set.seed(seeds_for_sampling)
+
   if (methodology_for_bootstrapping %in% c("SExp", "SUoO")) {
 
     # Get unique UoO and then remove df_exp and df_cm dataset since they are not used anymore
@@ -259,7 +261,7 @@ GenerateMatchedDataset <- function(exposed,
     # Generate samples of UoO and save them
     # TODO change here for sampling
     # TODO set seed for bootstrap sampling
-    set.seed(seeds_for_sampling)
+
     # seeds <- replicate(number_of_bootstrapping_samples, {
     #   sample(1:100, 1)
     # }, simplify = T)

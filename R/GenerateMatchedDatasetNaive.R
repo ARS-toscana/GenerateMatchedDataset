@@ -85,6 +85,8 @@ GenerateMatchedDatasetNaive <- function(exposed,
   exposed_filtered <- exposed
   candidate_filtered <- candidate_matches
 
+  set.seed(seeds_for_sampling)
+
   if (methodology_for_bootstrapping != "No bootstrapping") {
 
     # Get unique UoO and then remove exposed and candidate_matches dataset since they are not used anymore
@@ -98,7 +100,6 @@ GenerateMatchedDatasetNaive <- function(exposed,
     # Generate samples of UoO and save them
     # TODO change here for sampling
     # TODO set seed for bootstrap sampling
-    set.seed(seeds_for_sampling)
     # seeds <- replicate(number_of_bootstrapping_samples, {
     #   sample(1:100, 1)
     # }, simplify = T)
@@ -177,7 +178,7 @@ GenerateMatchedDatasetNaive <- function(exposed,
 
   # Create the bootstrap sample and then extract a number of controls for each exposed
   # Save the dataset
-  if (!is.null(number_of_bootstrapping_samples)) {
+  if (methodology_for_bootstrapping != "No bootstrapping") {
     for (i in 1:number_of_bootstrapping_samples) {
       bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_naive_", i)), nthreads = data.table_threads)
 
