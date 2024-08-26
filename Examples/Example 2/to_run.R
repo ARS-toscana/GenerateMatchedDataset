@@ -43,7 +43,14 @@ GenerateMatchedDatasetNaive(exposed = data.table::fread("Examples/test_with_simu
 
 bootstrap_sample_original <- qs::qread(file.path("Examples/Example 2/g_output", paste0("bootstrap_", 1)))
 bootstrap_sample_naive <- qs::qread(file.path("Examples/Example 2/g_output", paste0("bootstrap_naive_", 1)))
-data.table::setorder(bootstrap_sample_original, person_id, i.person_id)
-data.table::setorder(bootstrap_sample_naive, person_id, i.person_id)
+data.table::setkey(bootstrap_sample_original, person_id, i.person_id)
+data.table::setkey(bootstrap_sample_naive, person_id, i.person_id)
+identical(bootstrap_sample_original, bootstrap_sample_naive)
+all.equal(bootstrap_sample_original, bootstrap_sample_naive)
+
+bootstrap_sample_original <- qs::qread(file.path("Examples/Example 2/g_output", paste0("no_bootstrap")))
+bootstrap_sample_naive <- qs::qread(file.path("Examples/Example 2/g_output", paste0("no_bootstrap_naive")))
+data.table::setkey(bootstrap_sample_original, person_id, i.person_id)
+data.table::setkey(bootstrap_sample_naive, person_id, i.person_id)
 identical(bootstrap_sample_original, bootstrap_sample_naive)
 all.equal(bootstrap_sample_original, bootstrap_sample_naive)

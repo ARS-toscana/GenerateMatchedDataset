@@ -20,6 +20,7 @@ GenerateMatchedDataset(exposed = data.table::copy(exposed),
                        range_of_variables_with_range_matching = list(c(-1, 1)),
                        sample_size_per_exposed = 1,
                        seeds_for_sampling = 123,
+                       methodology_for_bootstrapping = "SExp",
                        threshold = 2000,
                        temporary_folder = c("Examples/Example 5/g_intermediate"),
                        output_matching = c("Examples/Example 5/g_output"))
