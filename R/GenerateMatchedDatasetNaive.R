@@ -136,15 +136,13 @@ GenerateMatchedDatasetNaive <- function(exposed,
   data.table::setnames(matched_df, time_variable_in_exposed, paste0("i.", time_variable_in_exposed))
   data.table::setnames(matched_df, paste0("x.", time_variable_in_exposed), time_variable_in_exposed)
 
-  set.seed(123)
-
   # Create the bootstrap sample and then extract a number of controls for each exposed
   # Save the dataset
-  data.table::setkeyv(matched_df, unit_of_observation)
+  data.table::setkeyv(matched_df, c(unit_of_observation, paste0("i.", unit_of_observation)))
   if (T) {
     bootstrap_sample <- data.table::copy(matched_df)
-
     # Extract a number of controls for each exposed
+    data.table::setkey(bootstrap_sample, person_id)
     if (sample_size_per_exposed != "N") {
       bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
                                                             by = unit_of_observation][[2]]]
@@ -172,7 +170,7 @@ GenerateMatchedDatasetNaive <- function(exposed,
     data.table::setcolorder(bootstrap_sample, col_order)
 
     # Final save of bootstrap sample
-    file_name <- file.path(output_matching, paste0("no_bootstrap"))
+    file_name <- file.path(output_matching, paste0("no_bootstrap_naive"))
     qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
     rm(bootstrap_sample)
   }

@@ -319,17 +319,16 @@ GenerateMatchedDataset <- function(exposed,
       data.table::setnames(matched_df, paste0("x.", time_variable_in_exposed), time_variable_in_exposed)
     }
 
-    set.seed(seeds_for_sampling)
-
     # Create the bootstrap sample and then extract a number of controls for each df_exp
     # Save the dataset
-    data.table::setkeyv(matched_df, unit_of_observation)
+    data.table::setkeyv(matched_df, c(unit_of_observation, paste0("i.", unit_of_observation)))
     if (T) {
 
       bootstrap_sample <- data.table::copy(matched_df)
 
       # Extract a number of controls for each df_exp
       if (sample_size_per_exposed != "N") {
+        data.table::setkey(bootstrap_sample, person_id)
         bootstrap_sample <- bootstrap_sample[bootstrap_sample[, .I[sample(.N, min(.N, sample_size_per_exposed))],
                                                               by = unit_of_observation][[2]]]
       }
@@ -348,6 +347,7 @@ GenerateMatchedDataset <- function(exposed,
 
         # Create bootstrap sample
         # TODO review here
+
         if (methodology_for_bootstrapping == "SExp") {
           bootstrap_sample <- matched_df[bootstrap_sample, on = unit_of_observation,
                                          nomatch = NULL, allow.cartesian = T]
@@ -358,7 +358,6 @@ GenerateMatchedDataset <- function(exposed,
                                                                                          unit_of_observation, collapse = ", "),
                                                                               nomatch = NULL, allow.cartesian = T]
         }
-
 
 
         # Extract a number of controls for each df_exp
