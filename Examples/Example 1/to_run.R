@@ -1,26 +1,47 @@
 rm(list=ls(all.names=TRUE))
+source(file.path("R", "GenerateMatchedDataset.R"))
+source(file.path("R", "GenerateMatchedDatasetNaive.R"))
+unlink("Examples/Example 1/g_intermediate", recursive = T)
+unlink("Examples/Example 1/g_output", recursive = T)
+dir.create("Examples/Example 1/g_intermediate")
+dir.create("Examples/Example 1/g_output")
 
+GenerateMatchedDataset(exposed = data.table::fread("Examples/test_with_simulated_data/exposed_1000.csv"),
+                       candidate_matches = data.table::fread("Examples/test_with_simulated_data/candidate_matches_1000.csv"),
+                       unit_of_observation = c("person_id"),
+                       time_variable_in_exposed = c("vax1_day"),
+                       time_variables_in_candidate_matches = c("start", "end"),
+                       variables_with_exact_matching = c("SES", "REGION"),
+                       variables_with_range_matching = c("age"),
+                       range_of_variables_with_range_matching = list(c(-1, 1)),
+                       sample_size_per_exposed = 1,
+                       seeds_for_sampling = 123,
+                       threshold = 2000000000,
+                       methodology_for_bootstrapping = "No bootstrapping",
+                       temporary_folder = c("Examples/Example 1/g_intermediate"),
+                       output_matching = c("Examples/Example 1/g_output"))
 
-#set the directory where the script is saved as the working directory
-if (!require("rstudioapi")) install.packages("rstudioapi")
-thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
-thisdir <- setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+GenerateMatchedDatasetNaive(exposed = data.table::fread("Examples/test_with_simulated_data/exposed_1000.csv"),
+                            candidate_matches = data.table::fread("Examples/test_with_simulated_data/candidate_matches_1000.csv"),
+                            unit_of_observation = c("person_id"),
+                            time_variable_in_exposed = c("vax1_day"),
+                            time_variables_in_candidate_matches = c("start", "end"),
+                            variables_with_exact_matching = c("SES", "REGION"),
+                            variables_with_range_matching = c("age"),
+                            range_of_variables_with_range_matching = list(c(-1, 1)),
+                            sample_size_per_exposed = 1,
+                            seeds_for_sampling = 123,
+                            threshold = 2000000000,
+                            methodology_for_bootstrapping = "No bootstrapping",
+                            temporary_folder = c("Examples/Example 1/g_intermediate"),
+                            output_matching = c("Examples/Example 1/g_output"))
 
-# load packages
-if (!require("data.table")) install.packages("data.table")
-library(data.table)
-if (!require("dplyr")) install.packages("dplyr")
-library(dplyr)
+# the output and intermediat datasets are stored in the format of the qs package
+# to read the output, use the following routines in the qs package
 
-
-# Store in a variable the size of the dataset
-df_size <- 1000
-
-# names of the datasets of exposed and candidate_matches, and of the matched
-name_dataset_exposed <- "exposed_1000"
-name_dataset_candidate_matches <- "candidate_matches_1000"
-
-# load datasets
-
-exposed <- fread(paste0(thisdir,"/",name_dataset_exposed,".csv") )
-candidate_matches <- fread(paste0(thisdir,"/",name_dataset_candidate_matches,".csv") )
+bootstrap_sample_original <- qs::qread(file.path("Examples/Example 1/g_output", paste0("no_bootstrap")))
+bootstrap_sample_naive <- qs::qread(file.path("Examples/Example 1/g_output", paste0("no_bootstrap_naive")))
+data.table::setkey(bootstrap_sample_original, person_id, i.person_id)
+data.table::setkey(bootstrap_sample_naive, person_id, i.person_id)
+identical(bootstrap_sample_original, bootstrap_sample_naive)
+all.equal(bootstrap_sample_original, bootstrap_sample_naive)
