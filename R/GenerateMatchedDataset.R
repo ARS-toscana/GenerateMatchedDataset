@@ -203,16 +203,18 @@ GenerateMatchedDataset <- function(exposed,
 
     groups_idx <- list(list("sum" = values[[names(values)[[1]]]], "indices" = c(names(values)[[1]])))
 
-    for (val in names(values)[2:length(names(values))]) {
+    if (length(values) > 1) {
+      for (val in names(values)[2:length(names(values))]) {
 
-      which_less_thr <- which(sapply(groups_idx, `[[`, 1) + values[[val]] <= threshold)
+        which_less_thr <- which(sapply(groups_idx, `[[`, 1) + values[[val]] <= threshold)
 
-      if (identical(which_less_thr, integer(0))) {
-        groups_idx <- append(groups_idx, list(list("sum" = values[[val]], "indices" = c(val))))
-      } else {
-        idx <- min(which_less_thr)
-        groups_idx[[idx]][["indices"]] <- c(groups_idx[[idx]][["indices"]], val)
-        groups_idx[[idx]][["sum"]] <- groups_idx[[idx]][["sum"]] + values[[val]]
+        if (identical(which_less_thr, integer(0))) {
+          groups_idx <- append(groups_idx, list(list(sum = values[[val]], indices = c(val))))
+        } else {
+          idx <- min(which_less_thr)
+          groups_idx[[idx]][["indices"]] <- c(groups_idx[[idx]][["indices"]], val)
+          groups_idx[[idx]][["sum"]] <- groups_idx[[idx]][["sum"]] + values[[val]]
+        }
       }
     }
 
