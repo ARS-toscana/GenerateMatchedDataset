@@ -64,7 +64,9 @@ GenerateMatchedDataset <- function(exposed,
 
   time_variables_in_candidate_matches <- unique(time_variables_in_candidate_matches)
   flag_single_time_var <- if (length(time_variables_in_candidate_matches) == 1) T else F
-
+  flag_no_time_var <- if (length(time_variables_in_candidate_matches) == 0 |
+                          length(time_variable_in_exposed) == 0) T else F
+  time_variable_in_exposed
   # Remove columns not used during the matching and not primary keys
   # TODO write routine to minimize number of hash tables
   # TODO to prevent different number of rows create if possible single table from entire population
@@ -127,6 +129,7 @@ GenerateMatchedDataset <- function(exposed,
   lower_boundaries <- character()
   upper_boundaries <- character()
 
+
   if (!is.null(variables_with_range_matching)) {
     # TODO check names usage here
     lower_boundaries <- unlist(range_of_variables_with_range_matching)[c(TRUE, FALSE)]
@@ -145,17 +148,23 @@ GenerateMatchedDataset <- function(exposed,
   }
 
   # Define the set of rules to be used during matching for variables with predefined intervals
-  if (flag_single_time_var) {
-    list_time_ranges_rules <- list(paste0(time_variable_in_exposed, " == ", time_variables_in_candidate_matches))
+  if (!flag_no_time_var) {
+    if (flag_single_time_var) {
+      list_time_ranges_rules <- list(paste0(time_variable_in_exposed, " == ", time_variables_in_candidate_matches))
+    } else {
+      list_time_ranges_rules <- list(paste0(time_variable_in_exposed, " <= ", time_variables_in_candidate_matches[[2]]),
+                                     paste0(time_variable_in_exposed, " >= ", time_variables_in_candidate_matches[[1]]))
+    }
   } else {
-    list_time_ranges_rules <- list(paste0(time_variable_in_exposed, " <= ", time_variables_in_candidate_matches[[2]]),
-                                   paste0(time_variable_in_exposed, " >= ", time_variables_in_candidate_matches[[1]]))
+    list_time_ranges_rules <- list()
   }
+
 
 
 
   # Define join rules and column to be retained after the join
   strata_after_join <- c(unit_of_observation, paste0("i.", unit_of_observation))
+
   join_rules <- c(exact_strata_col, unlist(data.table::transpose(list_simple_ranges_rules)),
                   unlist(data.table::transpose(list_time_ranges_rules)))
   if (flag_single_time_var & !all(is.null(time_variables_in_candidate_matches)) & all(time_variables_in_candidate_matches == time_variable_in_exposed)) time_variables_in_candidate_matches <- c()
@@ -176,6 +185,7 @@ GenerateMatchedDataset <- function(exposed,
   }
   cols_to_include <- c(cols_to_include, "N", "i.N")
   smaller_join_rules <- c(exact_strata_col, unlist(data.table::transpose(list_simple_ranges_rules)))
+
   complete_tr <- exposed_tr[candidate_tr, ..cols_to_include, on = smaller_join_rules, nomatch = NULL]
   if (!is.null(variables_with_range_matching)) {
     data.table::setnames(complete_tr, paste0("x.", c(names(lower_boundaries), names(upper_boundaries))),
@@ -389,8 +399,8 @@ GenerateMatchedDataset <- function(exposed,
     if (!is.null(variables_with_exact_matching)){
       hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
       tmp <- tmp[hash_table_exact, on = c(exact_strata_col), nomatch = NULL][, exact_strata := NULL]
+      rm(hash_table_exact)
     }
-    rm(hash_table_exact)
 
     if (isTRUE(exclude_columns) & !identical(excl_cols_exp, character(0))) {
       hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
@@ -444,8 +454,9 @@ GenerateMatchedDataset <- function(exposed,
       if (!is.null(variables_with_exact_matching)){
         hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
         tmp <- tmp[hash_table_exact, on = c(exact_strata_col), nomatch = NULL][, exact_strata := NULL]
+        rm(hash_table_exact)
       }
-      rm(hash_table_exact)
+
       if (isTRUE(exclude_columns) & !identical(excl_cols_exp, character(0))) {
         hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
         tmp <- tmp[hash_table_excl_exp, on = excl_strata_col_exp, nomatch = NULL]
