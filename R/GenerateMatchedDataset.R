@@ -81,7 +81,7 @@ GenerateMatchedDataset <- function(exposed,
 
     excl_cols_exp_real <- c(excl_strata_col_exp, excl_cols_exp)
     if (!identical(excl_cols_exp, character(0))) {
-      qs::qsave(unique(df_exp[, ..excl_cols_exp_real]),
+      qs2::qs_save(unique(df_exp[, ..excl_cols_exp_real]),
                 file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table_threads)
       df_exp[, (excl_cols_exp) := NULL]
     }
@@ -99,7 +99,7 @@ GenerateMatchedDataset <- function(exposed,
 
     excl_cols_cand_real <- c(excl_strata_col_cand, excl_cols_cand)
     if (!identical(excl_cols_cand, character(0))) {
-      qs::qsave(unique(df_cm[, ..excl_cols_cand_real]),
+      qs2::qs_save(unique(df_cm[, ..excl_cols_cand_real]),
                 file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table_threads)
       df_cm[, (excl_cols_cand) := NULL]
     }
@@ -115,7 +115,7 @@ GenerateMatchedDataset <- function(exposed,
     hash_table_exact <- unique(data.table::rbindlist(list(unique(df_exp[, ..variables_with_exact_matching]),
                                                           unique(df_cm[, ..variables_with_exact_matching]))))
     hash_table_exact[, exact_strata := 1:.N]
-    qs::qsave(hash_table_exact,
+    qs2::qs_save(hash_table_exact,
               file.path(temporary_folder, "HT_exact"), nthreads = data.table_threads)
     df_exp <- df_exp[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
     df_cm <- df_cm[hash_table_exact, on = variables_with_exact_matching][, (variables_with_exact_matching) := NULL]
@@ -247,12 +247,12 @@ GenerateMatchedDataset <- function(exposed,
   for (batch_n in 1:N_of_batches) {
     cols_exp <- colnames(df_exp)
     cols_to_keep <- intersect(colnames(complete_tr), cols_exp)
-    qs::qsave(df_exp[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_exp,
+    qs2::qs_save(df_exp[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_exp,
                       on = cols_to_keep, allow.cartesian = TRUE],
               file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
     cols_cand <- colnames(df_cm)
     cols_to_keep <- intersect(colnames(complete_tr), cols_cand)
-    qs::qsave(df_cm[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_cand,
+    qs2::qs_save(df_cm[unique(complete_tr[batch_number == batch_n, ..cols_to_keep]), ..cols_cand,
                                 on = cols_to_keep, allow.cartesian = TRUE],
               file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
   }
@@ -283,7 +283,7 @@ GenerateMatchedDataset <- function(exposed,
     for (i in 1:number_of_bootstrapping_samples) {
       # set.seed(seeds[[i]])
       file_name <- file.path(temporary_folder, paste0("bootstrap_UoO_", i))
-      qs::qsave(data.table::setkeyv(distinct_UoO[sample(.N, pop_size, replace = T)], unit_of_observation),
+      qs2::qs_save(data.table::setkeyv(distinct_UoO[sample(.N, pop_size, replace = T)], unit_of_observation),
                 file_name, nthreads = data.table_threads)
     }
     rm(distinct_UoO)
@@ -295,8 +295,8 @@ GenerateMatchedDataset <- function(exposed,
   for (batch_n in 1:N_of_batches) {
 
     # Load batch
-    exposed_filtered <- qs::qread(file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
-    candidate_filtered <- qs::qread(file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
+    exposed_filtered <- qs2::qs_read(file.path(temporary_folder, paste0("exposed_strata_", batch_n)), nthreads = data.table_threads)
+    candidate_filtered <- qs2::qs_read(file.path(temporary_folder, paste0("candidates_strata_", batch_n)), nthreads = data.table_threads)
 
     # IMPORTANT: necessary for the join in case 2+ variables with ranges
     data.table::setDT(exposed_filtered)
@@ -349,7 +349,7 @@ GenerateMatchedDataset <- function(exposed,
 
       # Save the dataset
       file_name <- file.path(temporary_folder, paste0("no_bootstrap_batch_", batch_n))
-      qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
+      qs2::qs_save(bootstrap_sample, file_name, nthreads = data.table_threads)
       rm(bootstrap_sample)
     }
 
@@ -357,7 +357,7 @@ GenerateMatchedDataset <- function(exposed,
     # Save the dataset
     if (methodology_for_bootstrapping %in% c("SExp", "SUoO")) {
       for (i in 1:number_of_bootstrapping_samples) {
-        bootstrap_sample <- qs::qread(file.path(temporary_folder, paste0("bootstrap_UoO_", i)), nthreads = data.table_threads)
+        bootstrap_sample <- qs2::qs_read(file.path(temporary_folder, paste0("bootstrap_UoO_", i)), nthreads = data.table_threads)
 
         # Create bootstrap sample
         # TODO review here
@@ -382,7 +382,7 @@ GenerateMatchedDataset <- function(exposed,
 
         # Save the dataset
         file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", batch_n))
-        qs::qsave(bootstrap_sample, file_name, nthreads = data.table_threads)
+        qs2::qs_save(bootstrap_sample, file_name, nthreads = data.table_threads)
         rm(bootstrap_sample)
       }
       rm(matched_df)
@@ -395,24 +395,24 @@ GenerateMatchedDataset <- function(exposed,
     # Load and combine all batches of a single bootstrap sample
     tmp <- data.table::rbindlist(lapply(1:N_of_batches, function(x) {
       file_name <- file.path(temporary_folder, paste0("no_bootstrap_batch_", x))
-      qs::qread(file_name, nthreads = data.table::getDTthreads())
+      qs2::qs_read(file_name, nthreads = data.table::getDTthreads())
     }))
 
     # Add again excluded columns and single exact variables
     if (!is.null(variables_with_exact_matching)){
-      hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
+      hash_table_exact <- qs2::qs_read(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
       tmp <- tmp[hash_table_exact, on = c(exact_strata_col), nomatch = NULL][, exact_strata := NULL]
       rm(hash_table_exact)
     }
 
     if (isTRUE(exclude_columns) & !identical(excl_cols_exp, character(0))) {
-      hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
+      hash_table_excl_exp <- qs2::qs_read(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
       tmp <- tmp[hash_table_excl_exp, on = excl_strata_col_exp, nomatch = NULL]
       tmp[, (excl_strata_col_exp) := NULL]
     }
 
     if (isTRUE(exclude_columns) & !identical(excl_cols_cand, character(0))) {
-      hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
+      hash_table_excl_cand <- qs2::qs_read(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
       tmp <- tmp[hash_table_excl_cand, on = excl_strata_col_cand, nomatch = NULL, allow.cartesian = T]
       tmp[, (excl_strata_col_cand) := NULL]
     }
@@ -440,7 +440,7 @@ GenerateMatchedDataset <- function(exposed,
 
     # Final save of bootstrap sample
     file_name <- file.path(output_matching, "no_bootstrap")
-    qs::qsave(tmp, file_name, nthreads = data.table_threads)
+    qs2::qs_save(tmp, file_name, nthreads = data.table_threads)
   }
 
   # Clean each dataset and combine them to from the complete bootstrap samples
@@ -450,24 +450,24 @@ GenerateMatchedDataset <- function(exposed,
       # Load and combine all batches of a single bootstrap sample
       tmp <- data.table::rbindlist(lapply(1:N_of_batches, function(x) {
         file_name <- file.path(temporary_folder, paste0("bootstrap_", i, "_batch_", x))
-        qs::qread(file_name, nthreads = data.table::getDTthreads())
+        qs2::qs_read(file_name, nthreads = data.table::getDTthreads())
       }))
 
       # Add again excluded columns and single exact variables
       if (!is.null(variables_with_exact_matching)){
-        hash_table_exact <- qs::qread(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
+        hash_table_exact <- qs2::qs_read(file.path(temporary_folder, "HT_exact"), nthreads = data.table::getDTthreads())
         tmp <- tmp[hash_table_exact, on = c(exact_strata_col), nomatch = NULL][, exact_strata := NULL]
         rm(hash_table_exact)
       }
 
       if (isTRUE(exclude_columns) & !identical(excl_cols_exp, character(0))) {
-        hash_table_excl_exp <- qs::qread(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
+        hash_table_excl_exp <- qs2::qs_read(file.path(temporary_folder, "HT_excl_exposed"), nthreads = data.table::getDTthreads())
         tmp <- tmp[hash_table_excl_exp, on = excl_strata_col_exp, nomatch = NULL]
         tmp[, (excl_strata_col_exp) := NULL]
       }
 
       if (isTRUE(exclude_columns) & !identical(excl_cols_cand, character(0))) {
-        hash_table_excl_cand <- qs::qread(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
+        hash_table_excl_cand <- qs2::qs_read(file.path(temporary_folder, "HT_excl_candidates"), nthreads = data.table::getDTthreads())
         tmp <- tmp[hash_table_excl_cand, on = excl_strata_col_cand, nomatch = NULL, allow.cartesian = T]
         tmp[, (excl_strata_col_cand) := NULL]
       }
@@ -495,7 +495,7 @@ GenerateMatchedDataset <- function(exposed,
 
       # Final save of bootstrap sample
       file_name <- file.path(output_matching, paste0("bootstrap_", i))
-      qs::qsave(tmp, file_name, nthreads = data.table_threads)
+      qs2::qs_save(tmp, file_name, nthreads = data.table_threads)
     }
   }
 }
